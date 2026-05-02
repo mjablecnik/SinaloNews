@@ -147,8 +147,8 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
 - [x] 3. Checkpoint - Ensure all service tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Implement API routes and FastAPI application
-  - [ ] 4.1 Create FastAPI app entry point with middleware and lifespan
+- [x] 4. Implement API routes and FastAPI application
+  - [x] 4.1 Create FastAPI app entry point with middleware and lifespan
     - Create `src/main.py` with FastAPI app, lifespan handler for DB engine and httpx client setup/teardown
     - Add request ID middleware (UUID4 per request, added to response headers and structlog context)
     - Add global exception handler returning consistent ErrorResponse JSON
@@ -156,7 +156,7 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - Include all route routers
     - _Requirements: 9.1, 9.2_
 
-  - [ ] 4.2 Implement website routes
+  - [x] 4.2 Implement website routes
     - Create `src/routes/websites.py` with APIRouter prefix `/api/websites`
     - POST `/api/websites`: register website (name + url), return 201 or existing record if duplicate
     - GET `/api/websites`: list with pagination (page, size params)
@@ -186,14 +186,14 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - After deleting a website, GET returns 404 and total count decreases by 1
     - **Validates: Requirements 1.5**
 
-  - [ ] 4.6 Implement feed routes
+  - [x] 4.6 Implement feed routes
     - Create `src/routes/feeds.py` with APIRouter
     - POST `/api/feeds/{id}/parse`: parse single feed
     - POST `/api/websites/{id}/parse`: parse all feeds for website
     - Add OpenAPI summaries and response schemas
     - _Requirements: 3.6, 3.7, 13.3_
 
-  - [ ] 4.7 Implement article routes
+  - [x] 4.7 Implement article routes
     - Create `src/routes/articles.py` with APIRouter
     - GET `/api/articles/{id}`: get article with all fields (ArticleDetailResponse)
     - GET `/api/feeds/{id}/articles`: list articles for feed with pagination and status filter
@@ -208,14 +208,14 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - For mixed-status articles and any filter value, listing returns only matching articles
     - **Validates: Requirements 7.2, 7.3, 7.4**
 
-  - [ ] 4.9 Implement batch routes
+  - [x] 4.9 Implement batch routes
     - Create `src/routes/batch.py` with APIRouter prefix `/api/batch`
     - POST `/api/batch/process`: process all websites
     - POST `/api/batch/process/{website_id}`: process single website
     - Add OpenAPI summaries and response schemas
     - _Requirements: 5.5, 13.3_
 
-  - [ ] 4.10 Implement health and status routes
+  - [x] 4.10 Implement health and status routes
     - Create `src/routes/health.py` with APIRouter
     - GET `/health`: return 200 if DB connection works, 503 if unavailable
     - GET `/status`: return pipeline statistics (total websites, feeds, articles, articles by status)
