@@ -76,15 +76,21 @@ async def list_feed_articles(
     if feed is None:
         raise HTTPException(status_code=404, detail="Feed not found")
 
-    q = select(Article).where(Article.feed_id == feed_id)
+    q = select(
+        Article.id, Article.feed_id, Article.url, Article.title,
+        Article.author, Article.published_at, Article.status,
+    ).where(Article.feed_id == feed_id)
     if status:
         q = q.where(Article.status == status)
 
     total = (await db.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
-    items = (await db.execute(q.offset((page - 1) * size).limit(size))).scalars().all()
+    rows = (await db.execute(q.offset((page - 1) * size).limit(size))).all()
 
     return PaginatedResponse(
-        items=[ArticleResponse.model_validate(a) for a in items],
+        items=[ArticleResponse(
+            id=r.id, feed_id=r.feed_id, url=r.url, title=r.title,
+            author=r.author, published_at=r.published_at, status=r.status,
+        ) for r in rows],
         total=total,
         page=page,
         size=size,

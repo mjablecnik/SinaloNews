@@ -156,7 +156,10 @@ async def list_website_articles(
         raise HTTPException(status_code=404, detail="Website not found")
 
     q = (
-        select(Article)
+        select(
+            Article.id, Article.feed_id, Article.url, Article.title,
+            Article.author, Article.published_at, Article.status,
+        )
         .join(Feed, Article.feed_id == Feed.id)
         .where(Feed.website_id == website_id)
     )
@@ -164,10 +167,13 @@ async def list_website_articles(
         q = q.where(Article.status == status)
 
     total = (await db.execute(select(func.count()).select_from(q.subquery()))).scalar_one()
-    items = (await db.execute(q.offset((page - 1) * size).limit(size))).scalars().all()
+    rows = (await db.execute(q.offset((page - 1) * size).limit(size))).all()
 
     return PaginatedResponse(
-        items=[ArticleResponse.model_validate(a) for a in items],
+        items=[ArticleResponse(
+            id=r.id, feed_id=r.feed_id, url=r.url, title=r.title,
+            author=r.author, published_at=r.published_at, status=r.status,
+        ) for r in rows],
         total=total,
         page=page,
         size=size,
