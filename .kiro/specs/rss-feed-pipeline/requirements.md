@@ -25,7 +25,7 @@ An RSS feed discovery, parsing, and article extraction pipeline exposed as a RES
 
 #### Acceptance Criteria
 
-1. WHEN a valid URL or domain is submitted with a name, THE API_Server SHALL create a new website record in the database and return the created resource with its ID
+1. WHEN a valid URL or domain is submitted with a name, THE API_Server SHALL create a new website record in the database, automatically trigger feed discovery, and return the created resource with its ID and discovered feeds
 2. WHEN a URL or domain that is already registered is submitted, THE API_Server SHALL return the existing website record without creating a duplicate
 3. WHEN an invalid URL or domain is submitted, THE API_Server SHALL return a 422 validation error with a descriptive message
 4. THE API_Server SHALL provide an endpoint to list all registered websites with pagination support
@@ -169,7 +169,7 @@ An RSS feed discovery, parsing, and article extraction pipeline exposed as a RES
 7. THE CLI_Client SHALL support `feed-parser parse --all` to trigger feed parsing for all registered websites
 8. THE CLI_Client SHALL support `feed-parser extract <name>` to trigger article download and extraction for all unprocessed articles of a website
 9. THE CLI_Client SHALL support `feed-parser extract --all` to trigger extraction for all unprocessed articles across all websites
-10. THE CLI_Client SHALL support `feed-parser run <name>` to execute the full pipeline (discover, parse, extract) for a website in one command
+10. THE CLI_Client SHALL support `feed-parser run <name>` to execute the pipeline (parse, extract) for a website in one command
 11. THE CLI_Client SHALL support `feed-parser run --all` to execute the full pipeline for all registered websites
 12. THE CLI_Client SHALL support `feed-parser article <id>` to display a single article's details including extracted text and status
 13. THE CLI_Client SHALL support `feed-parser article delete <id>` to delete a single article by ID

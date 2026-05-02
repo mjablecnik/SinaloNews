@@ -28,7 +28,7 @@ def get_discovery() -> FeedDiscoveryService:
 
 @router.post(
     "",
-    summary="Register website",
+    summary="Register website and auto-discover feeds",
     response_model=WebsiteResponse,
     status_code=201,
     responses={200: {"model": WebsiteResponse, "description": "Website already exists"}},
@@ -37,6 +37,7 @@ async def register_website(
     body: WebsiteCreate,
     response: Response,
     db: AsyncSession = Depends(get_db),
+    discovery: FeedDiscoveryService = Depends(get_discovery),
 ):
     existing = (
         await db.execute(select(Website).where(Website.url == body.url))
@@ -61,6 +62,13 @@ async def register_website(
             return WebsiteResponse.model_validate(existing)
         raise
 
+    # Auto-discover feeds for the newly registered website
+    try:
+        await discovery.discover_feeds(website, db)
+    except Exception:
+        pass  # Discovery failure should not prevent website registration
+
+    await db.refresh(website)
     return WebsiteResponse.model_validate(website)
 
 

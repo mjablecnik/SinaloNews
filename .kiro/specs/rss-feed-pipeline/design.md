@@ -216,7 +216,7 @@ Uses `asyncio.Lock` per domain and `time.monotonic()` for timing.
 
 | Method | Path | Description | Request | Response |
 |--------|------|-------------|---------|----------|
-| POST | `/api/websites` | Register website | `{name: str, url: str}` | `201 WebsiteResponse` |
+| POST | `/api/websites` | Register website + auto-discover feeds | `{name: str, url: str}` | `201 WebsiteResponse` |
 | GET | `/api/websites` | List websites | `?page=1&size=20` | `PaginatedResponse[WebsiteResponse]` |
 | GET | `/api/websites/{id}` | Get website | — | `WebsiteResponse` |
 | DELETE | `/api/websites/{id}` | Delete website | — | `204 No Content` |
@@ -268,7 +268,7 @@ feed-parser parse <name>                # Parse feeds for website
 feed-parser parse --all                 # Parse all
 feed-parser extract <name>                # Extract articles for website
 feed-parser extract --all                 # Extract all
-feed-parser run <name>                  # Full pipeline for website (discover, parse, extract)
+feed-parser run <name>                  # Pipeline for website (parse, extract)
 feed-parser run --all                   # Full pipeline for all
 feed-parser article <id>                # Show article details
 feed-parser article delete <id>         # Delete article
