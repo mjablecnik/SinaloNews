@@ -6,8 +6,8 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
 
 ## Tasks
 
-- [ ] 1. Set up project structure, configuration, and database foundation
-  - [ ] 1.1 Create project skeleton with pyproject.toml, .env.example, and src/ directory structure
+- [x] 1. Set up project structure, configuration, and database foundation
+  - [x] 1.1 Create project skeleton with pyproject.toml, .env.example, and src/ directory structure
     - Create `pyproject.toml` with dependencies: fastapi, uvicorn, sqlalchemy[asyncio], asyncpg, httpx, langchain-openai, langgraph, langsmith, qdrant-client, pydantic-settings, structlog
     - Create dev dependencies: pytest, pytest-asyncio, hypothesis, respx
     - Create `.env.example` with all environment variables documented with comments: DATABASE_URL, APP_PORT, OPENROUTER_API_KEY, LLM_MODEL, EMBEDDING_MODEL, EMBEDDING_API_URL, EMBEDDING_API_KEY, QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION, RAG_TOP_K, RAG_MAX_CHUNKS_PER_ARTICLE, CHUNK_SIZE, CHUNK_OVERLAP, LANGSMITH_API_KEY, LANGSMITH_PROJECT, LANGSMITH_TRACING, AI_AGENT_URL
@@ -15,7 +15,7 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - Add `__init__.py` files to all Python packages
     - _Requirements: 9.1–9.8, 11.5_
 
-  - [ ] 1.2 Implement configuration loading with pydantic-settings
+  - [x] 1.2 Implement configuration loading with pydantic-settings
     - Create `src/config.py` with a `Settings` class reading all env vars from the design
     - DATABASE_URL (required), OPENROUTER_API_KEY (required), APP_PORT (default 8001), LLM_MODEL (default "openai/gpt-4o-mini"), EMBEDDING_MODEL, EMBEDDING_API_URL, EMBEDDING_API_KEY (defaults to OPENROUTER_API_KEY), QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION, RAG_TOP_K, RAG_MAX_CHUNKS_PER_ARTICLE, CHUNK_SIZE, CHUNK_OVERLAP, LANGSMITH_API_KEY, LANGSMITH_PROJECT, LANGSMITH_TRACING
     - Fail with clear error naming the missing variable if DATABASE_URL or OPENROUTER_API_KEY is absent
@@ -26,17 +26,17 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - For any required env var (DATABASE_URL, OPENROUTER_API_KEY) that is missing, the application should fail to start and the error message should name the specific missing variable
     - **Validates: Requirements 9.9**
 
-  - [ ] 1.4 Set up SQLAlchemy async engine, session factory, and models
+  - [x] 1.4 Set up SQLAlchemy async engine, session factory, and models
     - Create `src/database.py` with async engine creation from DATABASE_URL, async session factory
     - Create `src/models.py` with read-only Article model (mapping to existing `articles` table) and new `IndexedArticle` model with fields: article_id (PK, FK to articles.id), indexed_at, chunk_count
     - _Requirements: 1.1, 1.5_
 
-  - [ ] 1.5 Define Pydantic request/response schemas
+  - [x] 1.5 Define Pydantic request/response schemas
     - Create `src/schemas.py` with all schemas from the design: QueryRequest, IndexRequest, SourceInfo, QueryResponse, IndexingResult, StatsResponse, HealthResponse, ErrorResponse, RetrievedChunk, AgentState
     - _Requirements: 5.1, 5.2, 5.6, 10.1_
 
-- [ ] 2. Implement embedding client and article indexer
-  - [ ] 2.1 Implement embedding client
+- [x] 2. Implement embedding client and article indexer
+  - [x] 2.1 Implement embedding client
     - Create `src/embeddings.py` with `EmbeddingClient` class
     - Thin wrapper around OpenAI-compatible `/v1/embeddings` endpoint using httpx
     - `embed_texts(texts: list[str]) -> list[list[float]]` for batch embedding
@@ -44,7 +44,7 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - Raise `EmbeddingError` on API failure
     - _Requirements: 1.3, 3.1, 8.1–8.4_
 
-  - [ ] 2.2 Implement text chunking logic in the indexer
+  - [x] 2.2 Implement text chunking logic in the indexer
     - Create `src/indexer.py` with `ArticleIndexer` class
     - Implement `chunk_text(text, chunk_size, overlap)` that splits text into overlapping chunks preserving sentence boundaries
     - No chunk exceeds chunk_size by more than one sentence length, consecutive chunks overlap by approximately chunk_overlap characters
@@ -55,7 +55,7 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - For any non-empty text and valid chunk_size/chunk_overlap (overlap < chunk_size), chunks should: (a) not exceed chunk_size by more than one sentence, (b) overlap by approximately chunk_overlap chars, (c) reconstruct the original text when overlaps are removed
     - **Validates: Requirements 1.2, 8.5**
 
-  - [ ] 2.4 Implement article indexing pipeline
+  - [x] 2.4 Implement article indexing pipeline
     - Complete `ArticleIndexer` with `index_articles(full_sync=False)` method
     - Read articles with `status = 'extracted'` from PG; in incremental mode skip already-indexed articles
     - Generate embeddings via EmbeddingClient, upsert to Qdrant with deterministic UUID (`uuid5(NAMESPACE, f"{article_id}:{chunk_index}")`)
