@@ -295,7 +295,7 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - List all endpoints with method, path, description, request/response examples
     - _Requirements: 13.1, 13.2_
 
-- [ ] 7. Final checkpoint - Ensure all tests pass
+- [x] 7. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
