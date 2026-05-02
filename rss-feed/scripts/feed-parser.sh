@@ -399,7 +399,7 @@ cmd_parse() {
     if [ "$JSON_OUTPUT" = "1" ]; then
         printf '%s\n' "$body"
     else
-        printf '%s\n' "$body" | jq -r '"Parse complete: feeds_parsed=\(.feeds_parsed) articles_discovered=\(.articles_discovered)"'
+        printf '%s\n' "$body" | jq -r '"Parse complete: articles_found=\(.articles_found) new_articles=\(.new_articles)"'
     fi
 }
 
@@ -445,8 +445,8 @@ cmd_extract() {
         r=$(api_post "/api/feeds/$feed_id/extract")
         parse_response "$r"
         if [ "$code" -lt 400 ] 2>/dev/null; then
-            extracted=$(printf '%s' "$body" | jq -r '.articles_extracted // 0')
-            errs=$(printf '%s' "$body" | jq -r '.errors | length // 0')
+            extracted=$(printf '%s' "$body" | jq -r '.extracted // 0')
+            errs=$(printf '%s' "$body" | jq -r '.errors | length')
             total_extracted=$((total_extracted + extracted))
             total_errors=$((total_errors + errs))
         fi
