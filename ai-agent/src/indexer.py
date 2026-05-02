@@ -106,14 +106,15 @@ class ArticleIndexer:
 
                 async with self._session_factory() as session:
                     existing = await session.get(IndexedArticle, article.id)
+                    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
                     if existing:
-                        existing.indexed_at = datetime.now(timezone.utc)
+                        existing.indexed_at = now_naive
                         existing.chunk_count = len(chunks)
                     else:
                         session.add(
                             IndexedArticle(
                                 article_id=article.id,
-                                indexed_at=datetime.now(timezone.utc),
+                                indexed_at=now_naive,
                                 chunk_count=len(chunks),
                             )
                         )
