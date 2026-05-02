@@ -50,7 +50,7 @@ class Feed(Base):
 class Article(Base):
     __tablename__ = "articles"
     __table_args__ = (
-        UniqueConstraint("feed_id", "url", name="uq_article_feed_url"),
+        UniqueConstraint("url", name="uq_article_url"),
         Index("ix_articles_status", "status"),
     )
 

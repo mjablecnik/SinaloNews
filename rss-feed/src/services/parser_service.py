@@ -60,7 +60,7 @@ class FeedParserService:
                 continue
 
             existing = await db.execute(
-                select(Article).where(Article.feed_id == feed.id, Article.url == url)
+                select(Article).where(Article.url == url)
             )
             if existing.scalar_one_or_none() is not None:
                 continue

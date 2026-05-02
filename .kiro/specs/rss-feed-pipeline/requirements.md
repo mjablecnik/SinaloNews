@@ -96,7 +96,7 @@ An RSS feed discovery, parsing, and article extraction pipeline exposed as a RES
 2. THE Pipeline SHALL store feed records with fields: id, website_id (foreign key), feed_url, title, feed_type (RSS/Atom), created_at, last_parsed_at
 3. THE Pipeline SHALL store article records with fields: id, feed_id (foreign key), url, title, author, published_at, summary, original_html, extracted_text, status, feedparser_raw_entry (JSON), created_at, updated_at
 4. THE Pipeline SHALL use appropriate indexes on url fields and foreign keys to ensure query performance
-5. THE Pipeline SHALL enforce unique constraints on website URL, website name, feed URL per website, and article URL per feed to prevent duplicates
+5. THE Pipeline SHALL enforce unique constraints on website URL, website name, feed URL per website, and article URL globally to prevent duplicates
 
 ### Requirement 7: Article Retrieval
 
