@@ -1,0 +1,24 @@
+.git
+.gitignore
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+tests/
+docs/
+.env
+.env.*
+!.env.example
+*.md
+.pytest_cache
+.hypothesis
+alembic/versions/
+IDE files
+.idea
+.vscode
+*.iml
+fly.toml
+docker-compose.yml
+scripts/

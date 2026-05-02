@@ -240,8 +240,8 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
 - [x] 5. Checkpoint - Ensure all API tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Implement CLI client and infrastructure
-  - [ ] 6.1 Create the bash CLI script (scripts/feed-parser.sh)
+- [x] 6. Implement CLI client and infrastructure
+  - [x] 6.1 Create the bash CLI script (scripts/feed-parser.sh)
     - Implement POSIX-compatible shell script with curl + jq
     - Read FEED_PARSER_API_URL from environment (default http://localhost:8000)
     - Implement all commands: add, list, list articles, discover, parse, parse --all, extract, extract --all, run, run --all, article, article delete, status, delete, help
@@ -262,36 +262,36 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - **Property 22: CLI displays API errors with status code** — Error output contains HTTP status code and error message
     - **Validates: Requirements 12.17**
 
-  - [ ] 6.3 Create Dockerfile with multi-stage build
+  - [x] 6.3 Create Dockerfile with multi-stage build
     - Build stage: install dependencies from pyproject.toml, copy source
     - Production stage: slim base image, copy only needed files
     - Follow Dockerfile optimization rules: .dockerignore, dependency layer first, deterministic install
     - _Requirements: 11.1_
 
-  - [ ] 6.4 Create docker-compose.yml for local development
+  - [x] 6.4 Create docker-compose.yml for local development
     - App service with env_file: .env, port mapping matching fly.toml
     - PostgreSQL service with volume for data persistence
     - restart: unless-stopped
     - _Requirements: 11.1_
 
-  - [ ] 6.5 Create fly.toml and fly-setup.sh for Fly.io deployment
+  - [x] 6.5 Create fly.toml and fly-setup.sh for Fly.io deployment
     - fly.toml with app name, non-sensitive env vars in [env] section, port configuration
     - fly-setup.sh: parse APP_NAME from fly.toml, create app if needed, read .env, skip keys in fly.toml [env], set remaining as fly secrets
     - Make fly-setup.sh executable
     - _Requirements: 11.1, 11.2_
 
-  - [ ] 6.6 Create .dockerignore
+  - [x] 6.6 Create .dockerignore
     - Exclude .git, __pycache__, .venv, tests, docs, .env, IDE files, alembic/versions
     - _Requirements: 11.1_
 
-  - [ ] 6.7 Create README.md with setup and deployment instructions
+  - [x] 6.7 Create README.md with setup and deployment instructions
     - Local Docker setup section (copy .env.example, docker compose up)
     - Fly.io deployment section (fly-setup.sh, fly deploy)
     - CLI usage section with examples
     - API endpoint summary
     - _Requirements: 13.2_
 
-  - [ ] 6.8 Create API documentation markdown file
+  - [x] 6.8 Create API documentation markdown file
     - List all endpoints with method, path, description, request/response examples
     - _Requirements: 13.1, 13.2_
 
