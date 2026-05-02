@@ -127,15 +127,15 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - Log warning at startup if LANGSMITH_API_KEY is not set; continue operating without tracing
     - _Requirements: 12.1–12.6_
 
-- [ ] 6. Implement API routes and FastAPI application
-  - [ ] 6.1 Create FastAPI app entry point with lifespan and error handling
+- [x] 6. Implement API routes and FastAPI application
+  - [x] 6.1 Create FastAPI app entry point with lifespan and error handling
     - Create `src/main.py` with FastAPI app, lifespan handler for DB engine, httpx client, Qdrant client, and embedding client setup/teardown
     - Add global exception handler returning consistent `ErrorResponse` JSON with error type, message, and timestamp
     - Configure structured logging with structlog (timestamp, level, component, context)
     - Log LLM request/response metadata (model, token count, latency) without full prompt/response content
     - _Requirements: 10.1–10.4_
 
-  - [ ] 6.2 Implement query endpoint
+  - [x] 6.2 Implement query endpoint
     - `POST /api/query`: accept `{"query": "..."}`, invoke NewsAgent, return `QueryResponse` with answer, sources, query, processing_time_ms
     - Return HTTP 422 on missing/empty query
     - Return HTTP 503 on LLM service unavailability
@@ -151,7 +151,7 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - For any empty or whitespace-only string, POST /api/query returns HTTP 422 and the agent is not invoked
     - **Validates: Requirements 5.3**
 
-  - [ ] 6.5 Implement index, stats, and health endpoints
+  - [x] 6.5 Implement index, stats, and health endpoints
     - `POST /api/index`: trigger indexing, accept optional `{"full_sync": false}`, return IndexingResult
     - `GET /api/stats`: return StatsResponse with total_articles_indexed, total_chunks, last_indexed_at from indexed_articles table
     - `GET /health`: return 200 with HealthResponse when DB and Qdrant are reachable; report individual component status
@@ -167,7 +167,7 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - For any API error (4xx or 5xx), JSON body contains error (string), message (string), and timestamp (ISO datetime)
     - **Validates: Requirements 10.1**
 
-- [ ] 7. Checkpoint - Ensure all API and agent tests pass
+- [x] 7. Checkpoint - Ensure all API and agent tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. Implement CLI client and infrastructure
