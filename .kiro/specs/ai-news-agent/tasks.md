@@ -80,7 +80,7 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - For any indexed article, every Qdrant point contains payload fields article_id, chunk_index, chunk_text, article_title, article_url, published_at, indexed_at
     - **Validates: Requirements 1.4, 3.5**
 
-- [ ] 3. Checkpoint - Ensure indexer tests pass
+- [x] 3. Checkpoint - Ensure indexer tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. Implement RAG retrieval pipeline
