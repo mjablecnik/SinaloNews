@@ -237,7 +237,7 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - For every endpoint in the spec, summary is non-empty and at least one response schema is defined
     - **Validates: Requirements 13.3**
 
-- [ ] 5. Checkpoint - Ensure all API tests pass
+- [x] 5. Checkpoint - Ensure all API tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Implement CLI client and infrastructure
