@@ -83,12 +83,12 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
 - [x] 3. Checkpoint - Ensure indexer tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Implement RAG retrieval pipeline
-  - [ ] 4.1 Implement Qdrant collection setup
+- [x] 4. Implement RAG retrieval pipeline
+  - [x] 4.1 Implement Qdrant collection setup
     - Add collection creation logic (cosine distance, HNSW indexing, configurable vector dimensions) to be called during app startup or first indexing run
     - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-  - [ ] 4.2 Implement RAG retrieval
+  - [x] 4.2 Implement RAG retrieval
     - Create `src/rag.py` with `RAGPipeline` class
     - `retrieve(query, date_from=None, date_to=None)`: embed query, search Qdrant with cosine similarity, apply optional date range filter on published_at payload field, deduplicate by article_id (max `RAG_MAX_CHUNKS_PER_ARTICLE` chunks per article), return top-k `RetrievedChunk` objects ordered by descending score
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
@@ -108,8 +108,8 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - For any retrieval result and configured max_chunks_per_article, no single article_id appears more than max_chunks_per_article times
     - **Validates: Requirements 3.4**
 
-- [ ] 5. Implement LangGraph agent
-  - [ ] 5.1 Implement LangGraph agent workflow
+- [x] 5. Implement LangGraph agent
+  - [x] 5.1 Implement LangGraph agent workflow
     - Create `src/agent.py` with `NewsAgent` class
     - Define LangGraph `StateGraph` with `AgentState` and two nodes: `retrieve` → `generate`
     - `retrieve` node: call `RAGPipeline.retrieve()`, populate `retrieved_chunks` in state; parse time references from query and pass date constraints
@@ -120,7 +120,7 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - Return `AgentResponse` with answer, sources, metadata
     - _Requirements: 4.1–4.7, 7.1–7.5_
 
-  - [ ] 5.2 Configure LangSmith tracing
+  - [x] 5.2 Configure LangSmith tracing
     - Set `LANGCHAIN_TRACING_V2=true` and `LANGCHAIN_API_KEY` from settings when LangSmith is configured
     - Include query text, retrieved chunk count, LLM model, token usage, and response latency in traces
     - Tag traces with LANGSMITH_PROJECT
