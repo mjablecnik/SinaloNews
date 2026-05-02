@@ -14,7 +14,6 @@ docs/
 *.md
 .pytest_cache
 .hypothesis
-alembic/versions/
 IDE files
 .idea
 .vscode

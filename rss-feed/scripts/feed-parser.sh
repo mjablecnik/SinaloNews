@@ -54,7 +54,7 @@ output() {
 # Name-to-ID resolution: GET /api/websites and find by name field
 resolve_name() {
     name="$1"
-    resp=$(api_get "/api/websites?size=1000")
+    resp=$(api_get "/api/websites?size=100")
     parse_response "$resp"
     check_error "$code" "$body"
     id=$(printf '%s' "$body" | jq -r --arg n "$name" '.items[] | select(.name == $n) | .id' 2>/dev/null | head -n 1)
@@ -302,7 +302,7 @@ cmd_list() {
         done
         [ -z "$name" ] && die "Missing website name.\nRun 'feed-parser help list' for usage."
         id=$(resolve_name "$name")
-        resp=$(api_get "/api/websites/$id/articles?size=200")
+        resp=$(api_get "/api/websites/$id/articles?size=100")
         parse_response "$resp"
         check_error "$code" "$body"
         if [ "$JSON_OUTPUT" = "1" ]; then
@@ -322,7 +322,7 @@ cmd_list() {
         esac
     done
 
-    resp=$(api_get "/api/websites?size=200")
+    resp=$(api_get "/api/websites?size=100")
     parse_response "$resp"
     check_error "$code" "$body"
     if [ "$JSON_OUTPUT" = "1" ]; then
