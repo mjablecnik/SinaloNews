@@ -35,7 +35,9 @@ def make_hit(article_id, score, chunk_text="chunk", published_at=None):
 
 def make_qdrant(search_results=None, collection_names=None):
     client = MagicMock()
-    client.search = AsyncMock(return_value=search_results or [])
+    # query_points returns an object with a .points list
+    points = search_results or []
+    client.query_points = AsyncMock(return_value=SimpleNamespace(points=points))
     # get_collections returns an object with a .collections list of items with .name
     cols = [SimpleNamespace(name=n) for n in (collection_names or [])]
     client.get_collections = AsyncMock(return_value=SimpleNamespace(collections=cols))
@@ -125,7 +127,7 @@ class TestRetrieve:
     async def test_searches_correct_collection(self):
         pipeline, qdrant, _ = make_pipeline(search_results=[])
         await pipeline.retrieve("q")
-        call_kwargs = qdrant.search.call_args.kwargs
+        call_kwargs = qdrant.query_points.call_args.kwargs
         assert call_kwargs["collection_name"] == "test_chunks"
 
     async def test_empty_results(self):
@@ -207,21 +209,21 @@ class TestDateFiltering:
     async def test_no_filter_when_no_dates(self):
         pipeline, qdrant, _ = make_pipeline(search_results=[])
         await pipeline.retrieve("q")
-        call_kwargs = qdrant.search.call_args.kwargs
+        call_kwargs = qdrant.query_points.call_args.kwargs
         assert call_kwargs.get("query_filter") is None
 
     async def test_filter_applied_when_date_from(self):
         pipeline, qdrant, _ = make_pipeline(search_results=[])
         date_from = datetime(2024, 1, 1, tzinfo=timezone.utc)
         await pipeline.retrieve("q", date_from=date_from)
-        call_kwargs = qdrant.search.call_args.kwargs
+        call_kwargs = qdrant.query_points.call_args.kwargs
         assert call_kwargs.get("query_filter") is not None
 
     async def test_filter_applied_when_date_to(self):
         pipeline, qdrant, _ = make_pipeline(search_results=[])
         date_to = datetime(2024, 12, 31, tzinfo=timezone.utc)
         await pipeline.retrieve("q", date_to=date_to)
-        call_kwargs = qdrant.search.call_args.kwargs
+        call_kwargs = qdrant.query_points.call_args.kwargs
         assert call_kwargs.get("query_filter") is not None
 
     async def test_filter_applied_when_both_dates(self):
@@ -229,7 +231,7 @@ class TestDateFiltering:
         date_from = datetime(2024, 1, 1, tzinfo=timezone.utc)
         date_to = datetime(2024, 12, 31, tzinfo=timezone.utc)
         await pipeline.retrieve("q", date_from=date_from, date_to=date_to)
-        call_kwargs = qdrant.search.call_args.kwargs
+        call_kwargs = qdrant.query_points.call_args.kwargs
         f = call_kwargs.get("query_filter")
         assert f is not None
         assert len(f.must) == 1
