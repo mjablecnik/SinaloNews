@@ -170,8 +170,8 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
 - [x] 7. Checkpoint - Ensure all API and agent tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Implement CLI client and infrastructure
-  - [ ] 8.1 Create the bash CLI script (scripts/ai-agent.sh)
+- [x] 8. Implement CLI client and infrastructure
+  - [x] 8.1 Create the bash CLI script (scripts/ai-agent.sh)
     - Implement POSIX-compatible shell script with curl + jq
     - Read `AI_AGENT_URL` from environment (default `http://localhost:8001`)
     - Implement commands: `query "text"`, `query --json "text"`, `status`, `index`, `help`, `--help`
@@ -193,31 +193,31 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - For any agent response, CLI with --json outputs valid JSON structurally identical to the raw API response
     - **Validates: Requirements 6.4**
 
-  - [ ] 8.4 Create Dockerfile with multi-stage build
+  - [x] 8.4 Create Dockerfile with multi-stage build
     - Build stage: Python slim base, install dependencies from pyproject.toml first (layer caching), then copy source
     - Production stage: slim base, copy only needed files
     - Follow Dockerfile optimization rules: .dockerignore, dependency layer first, deterministic install
     - _Requirements: 11.1_
 
-  - [ ] 8.5 Create docker-compose.yml for local development
+  - [x] 8.5 Create docker-compose.yml for local development
     - App service with `env_file: .env`, port mapping for APP_PORT
     - Qdrant service with persistent volume for data storage
     - PostgreSQL connection via DATABASE_URL in .env (shared with rss-feed)
     - `restart: unless-stopped`
     - _Requirements: 2.7, 11.2_
 
-  - [ ] 8.6 Create fly.toml and fly-setup.sh for Fly.io deployment
+  - [x] 8.6 Create fly.toml and fly-setup.sh for Fly.io deployment
     - `fly.toml` with app name, non-sensitive env vars in `[env]` section, port configuration
     - `fly-setup.sh`: parse APP_NAME from fly.toml, create app if needed, read .env, skip keys in fly.toml [env], set remaining as fly secrets
     - Make fly-setup.sh executable
     - _Requirements: 11.3, 11.4_
 
-  - [ ] 8.7 Create .dockerignore and .gitignore
+  - [x] 8.7 Create .dockerignore and .gitignore
     - .dockerignore: exclude .git, __pycache__, .venv, tests, .env, IDE files
     - .gitignore: exclude .env, .env.local, __pycache__, .venv, *.pyc
     - _Requirements: 11.1_
 
-  - [ ] 8.8 Create README.md with setup and deployment instructions
+  - [x] 8.8 Create README.md with setup and deployment instructions
     - Local Docker setup section (copy .env.example, docker compose up)
     - Fly.io deployment section (fly-setup.sh, fly deploy)
     - CLI usage section with examples for all commands

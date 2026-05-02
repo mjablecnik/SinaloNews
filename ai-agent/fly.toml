@@ -1,0 +1,30 @@
+[app]
+name = "ai-news-agent"
+primary_region = "iad"
+
+[build]
+
+[env]
+APP_PORT = "8001"
+LLM_MODEL = "openai/gpt-4o-mini"
+EMBEDDING_MODEL = "openai/text-embedding-3-small"
+EMBEDDING_API_URL = "https://openrouter.ai/api/v1"
+QDRANT_COLLECTION = "article_chunks"
+RAG_TOP_K = "10"
+RAG_MAX_CHUNKS_PER_ARTICLE = "3"
+CHUNK_SIZE = "1000"
+CHUNK_OVERLAP = "200"
+LANGSMITH_PROJECT = "sinalo-agent"
+LANGSMITH_TRACING = "true"
+
+[http_service]
+internal_port = 8001
+force_https = true
+auto_stop_machines = true
+auto_start_machines = true
+min_machines_running = 0
+
+[[vm]]
+memory = "512mb"
+cpu_kind = "shared"
+cpus = 1
