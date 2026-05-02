@@ -144,7 +144,7 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - For K failures out of M articles, summary reports articles_extracted = M - K and errors has K entries
     - **Validates: Requirements 5.3, 5.4**
 
-- [ ] 3. Checkpoint - Ensure all service tests pass
+- [x] 3. Checkpoint - Ensure all service tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. Implement API routes and FastAPI application
