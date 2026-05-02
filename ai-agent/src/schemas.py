@@ -75,3 +75,4 @@ class AgentState(TypedDict):
     answer: str
     sources: list[Any]  # list[SourceInfo]
     _route: str  # "retrieve" or "direct"
+    _search_query: str  # rewritten query optimized for retrieval

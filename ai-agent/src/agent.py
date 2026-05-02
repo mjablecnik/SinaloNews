@@ -99,6 +99,22 @@ Examples:
 - "What is 2+2?" -> direct
 """
 
+_REWRITE_SYSTEM_PROMPT = """You are a search query optimizer. Rewrite the user's conversational question into a concise, keyword-rich search query optimized for semantic similarity search over a news article database.
+
+Rules:
+- Output ONLY the rewritten query, nothing else.
+- Use specific keywords and named entities.
+- Remove conversational filler ("tell me", "what about", "I want to know").
+- Keep the core intent and topic.
+- Write in the same language as the input query.
+
+Examples:
+- "Co se dnes stalo zajímavého ve světě?" -> "důležité světové události novinky dnes"
+- "Tell me about the war in Ukraine" -> "Ukraine war latest developments conflict"
+- "Co se nyní děje v české vládě?" -> "česká vláda aktuální politická situace"
+- "What happened in IT in the last 24 hours?" -> "IT technology news developments last 24 hours"
+"""
+
 
 def _build_context(chunks: list[RetrievedChunk]) -> str:
     if not chunks:
@@ -148,6 +164,7 @@ class NewsAgent:
     def _build_graph(self):
         graph = StateGraph(AgentState)
         graph.add_node("route", self._route_node)
+        graph.add_node("rewrite", self._rewrite_node)
         graph.add_node("retrieve", self._retrieve_node)
         graph.add_node("generate", self._generate_node)
         graph.add_node("direct_answer", self._direct_answer_node)
@@ -155,8 +172,9 @@ class NewsAgent:
         graph.add_conditional_edges(
             "route",
             lambda state: state.get("_route", "retrieve"),
-            {"retrieve": "retrieve", "direct": "direct_answer"},
+            {"retrieve": "rewrite", "direct": "direct_answer"},
         )
+        graph.add_edge("rewrite", "retrieve")
         graph.add_edge("retrieve", "generate")
         graph.add_edge("generate", END)
         graph.add_edge("direct_answer", END)
@@ -183,10 +201,22 @@ class NewsAgent:
         response = await self._invoke_llm_with_retry(messages)
         return {"answer": response.content, "sources": []}
 
+    async def _rewrite_node(self, state: AgentState) -> dict:
+        """Rewrite the user query into a search-optimized query for better retrieval."""
+        messages = [
+            {"role": "system", "content": _REWRITE_SYSTEM_PROMPT},
+            {"role": "user", "content": state["query"]},
+        ]
+        response = await self._llm.ainvoke(messages)
+        rewritten = response.content.strip()
+        log.info("query_rewritten", original=state["query"][:80], rewritten=rewritten[:80])
+        return {"_search_query": rewritten}
+
     async def _retrieve_node(self, state: AgentState) -> dict:
+        search_query = state.get("_search_query") or state["query"]
         date_from, date_to = _parse_date_constraints(state["query"])
         chunks = await self._rag.retrieve(
-            query=state["query"],
+            query=search_query,
             date_from=date_from,
             date_to=date_to,
         )
@@ -251,6 +281,7 @@ class NewsAgent:
             "answer": "",
             "sources": [],
             "_route": "",
+            "_search_query": "",
         }
 
         final_state = await self._graph.ainvoke(initial_state)
