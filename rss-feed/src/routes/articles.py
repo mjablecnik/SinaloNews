@@ -106,4 +106,10 @@ async def extract_feed_articles(
     if feed is None:
         raise HTTPException(status_code=404, detail="Feed not found")
     result = await extractor.extract_feed_articles(feed, db)
-    return ExtractBatchResponse(feed_id=feed_id, **result)
+    return ExtractBatchResponse(
+        feed_id=feed_id,
+        total=result["total"],
+        extracted=result["extracted"],
+        failed=result["failed"],
+        errors=result["errors"],
+    )
