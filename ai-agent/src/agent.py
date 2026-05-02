@@ -80,6 +80,25 @@ Rules:
 - Keep answers concise and factual.
 """
 
+_DIRECT_SYSTEM_PROMPT = """You are a helpful AI assistant. Answer the user's question directly and concisely.
+You do not have access to any news articles for this question. Just answer based on your general knowledge."""
+
+_ROUTE_SYSTEM_PROMPT = """You are a query classifier. Determine if the user's query is asking about news, current events, articles, or information that would be found in a news article database.
+
+Respond with exactly one word:
+- "search" if the query is about news, current events, recent happenings, or topics that would be covered in news articles
+- "direct" if the query is a general question, greeting, chitchat, or something unrelated to news search
+
+Examples:
+- "What happened in Ukraine today?" -> search
+- "Tell me about the Czech government" -> search
+- "What's new in IT?" -> search
+- "Hello" -> direct
+- "What is Python?" -> direct
+- "How are you?" -> direct
+- "What is 2+2?" -> direct
+"""
+
 
 def _build_context(chunks: list[RetrievedChunk]) -> str:
     if not chunks:
@@ -128,12 +147,41 @@ class NewsAgent:
 
     def _build_graph(self):
         graph = StateGraph(AgentState)
+        graph.add_node("route", self._route_node)
         graph.add_node("retrieve", self._retrieve_node)
         graph.add_node("generate", self._generate_node)
-        graph.add_edge(START, "retrieve")
+        graph.add_node("direct_answer", self._direct_answer_node)
+        graph.add_edge(START, "route")
+        graph.add_conditional_edges(
+            "route",
+            lambda state: state.get("_route", "retrieve"),
+            {"retrieve": "retrieve", "direct": "direct_answer"},
+        )
         graph.add_edge("retrieve", "generate")
         graph.add_edge("generate", END)
+        graph.add_edge("direct_answer", END)
         return graph.compile()
+
+    async def _route_node(self, state: AgentState) -> dict:
+        """Classify whether the query needs RAG search or a direct answer."""
+        messages = [
+            {"role": "system", "content": _ROUTE_SYSTEM_PROMPT},
+            {"role": "user", "content": state["query"]},
+        ]
+        response = await self._llm.ainvoke(messages)
+        decision = response.content.strip().lower()
+        route = "retrieve" if "search" in decision else "direct"
+        log.info("query_routed", query=state["query"][:80], route=route)
+        return {"_route": route}
+
+    async def _direct_answer_node(self, state: AgentState) -> dict:
+        """Answer directly without RAG retrieval."""
+        messages = [
+            {"role": "system", "content": _DIRECT_SYSTEM_PROMPT},
+            {"role": "user", "content": state["query"]},
+        ]
+        response = await self._invoke_llm_with_retry(messages)
+        return {"answer": response.content, "sources": []}
 
     async def _retrieve_node(self, state: AgentState) -> dict:
         date_from, date_to = _parse_date_constraints(state["query"])
@@ -176,7 +224,10 @@ class NewsAgent:
         response = await self._invoke_llm_with_retry(messages)
         answer = response.content
 
-        sources = _deduplicate_sources(chunks)
+        # Only include sources that the LLM actually cited in the answer
+        all_sources = _deduplicate_sources(chunks)
+        sources = [s for s in all_sources if s.url in answer]
+
         return {"answer": answer, "sources": sources}
 
     async def _invoke_llm_with_retry(self, messages: list[dict]):
@@ -199,6 +250,7 @@ class NewsAgent:
             "retrieved_chunks": [],
             "answer": "",
             "sources": [],
+            "_route": "",
         }
 
         final_state = await self._graph.ainvoke(initial_state)

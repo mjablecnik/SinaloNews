@@ -74,3 +74,4 @@ class AgentState(TypedDict):
     retrieved_chunks: list[Any]  # list[RetrievedChunk] — kept as Any to avoid TypedDict nesting issues
     answer: str
     sources: list[Any]  # list[SourceInfo]
+    _route: str  # "retrieve" or "direct"
