@@ -224,7 +224,7 @@ Build a Python FastAPI service that indexes rss-feed articles into a Qdrant vect
     - API endpoint summary
     - _Requirements: 11.6_
 
-- [ ] 9. Final checkpoint - Ensure all tests pass
+- [x] 9. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
