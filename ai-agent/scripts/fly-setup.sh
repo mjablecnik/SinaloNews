@@ -21,7 +21,7 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
-APP_NAME=$(grep -E '^name\s*=' "$FLY_TOML" | head -1 | sed 's/.*=\s*"\(.*\)"/\1/')
+APP_NAME=$(grep '^app\s*=' "$FLY_TOML" | head -1 | sed 's/^app\s*=\s*"\(.*\)"/\1/')
 if [ -z "$APP_NAME" ]; then
     echo "Error: could not parse app name from fly.toml" >&2
     exit 1

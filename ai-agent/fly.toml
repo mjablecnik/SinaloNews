@@ -1,6 +1,5 @@
-[app]
-name = "ai-news-agent"
-primary_region = "iad"
+app = "ai-news-agent"
+primary_region = "ams"
 
 [build]
 

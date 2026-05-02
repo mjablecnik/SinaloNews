@@ -5,18 +5,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir hatchling
 
 COPY pyproject.toml .
-RUN pip install --no-cache-dir --target /app/deps \
-    fastapi \
-    "uvicorn[standard]" \
-    "sqlalchemy[asyncio]" \
-    asyncpg \
-    httpx \
-    langchain-openai \
-    langgraph \
-    langsmith \
-    "qdrant-client" \
-    pydantic-settings \
-    structlog
+RUN pip install --no-cache-dir --target /app/deps .
 
 COPY src/ ./src/
 
@@ -29,6 +18,7 @@ COPY --from=builder /app/deps /app/deps
 COPY --from=builder /app/src ./src
 
 ENV PYTHONPATH=/app/deps
+ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8001

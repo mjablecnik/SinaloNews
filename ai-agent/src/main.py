@@ -10,10 +10,10 @@ from sqlalchemy import func, select, text
 
 from src.agent import NewsAgent, configure_langsmith
 from src.config import settings
-from src.database import AsyncSessionFactory
+from src.database import AsyncSessionFactory, engine
 from src.embeddings import EmbeddingClient
 from src.indexer import ArticleIndexer
-from src.models import IndexedArticle
+from src.models import Base, IndexedArticle
 from src.rag import RAGPipeline
 from src.schemas import (
     ErrorResponse,
@@ -44,6 +44,10 @@ log = structlog.get_logger()
 async def lifespan(app: FastAPI):
     configure_langsmith(settings)
 
+    # Ensure the indexed_articles table exists
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all, tables=[IndexedArticle.__table__])
+
     embedding_client = EmbeddingClient(
         api_url=settings.EMBEDDING_API_URL,
         api_key=settings.effective_embedding_api_key(),
@@ -60,6 +64,13 @@ async def lifespan(app: FastAPI):
         qdrant_client=qdrant_client,
         settings=settings,
     )
+
+    # Ensure Qdrant collection exists (detect vector size from embedding model)
+    try:
+        sample_vector = await embedding_client.embed_query("test")
+        await rag_pipeline.ensure_collection(vector_size=len(sample_vector))
+    except Exception as exc:
+        log.warning("qdrant_collection_setup_skipped", error=str(exc))
 
     indexer = ArticleIndexer(
         db_session_factory=AsyncSessionFactory,
@@ -81,6 +92,7 @@ async def lifespan(app: FastAPI):
     yield
 
     await qdrant_client.close()
+    await engine.dispose()
     log.info("ai_agent_shutdown")
 
 
