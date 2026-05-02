@@ -6,8 +6,8 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
 
 ## Tasks
 
-- [ ] 1. Set up project structure, configuration, and database foundation
-  - [ ] 1.1 Create project skeleton with pyproject.toml, .env.example, and src/ directory structure
+- [x] 1. Set up project structure, configuration, and database foundation
+  - [x] 1.1 Create project skeleton with pyproject.toml, .env.example, and src/ directory structure
     - Create `pyproject.toml` with dependencies: fastapi, uvicorn, sqlalchemy[asyncio], asyncpg, alembic, httpx, feedparser, trafilatura, structlog, pydantic-settings
     - Create dev dependencies: pytest, pytest-asyncio, hypothesis, respx, httpx
     - Create `.env.example` with all environment variables: DATABASE_URL, APP_HOST, APP_PORT, REQUEST_DELAY_SECONDS, REQUEST_TIMEOUT_SECONDS, USER_AGENT
@@ -15,17 +15,17 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - Add `__init__.py` files to all Python packages
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-  - [ ] 1.2 Implement configuration loading with pydantic-settings
+  - [x] 1.2 Implement configuration loading with pydantic-settings
     - Create `src/config.py` with a `Settings` class reading from environment variables
     - Include DATABASE_URL (required), APP_HOST (default "0.0.0.0"), APP_PORT (default 8000), REQUEST_DELAY_SECONDS (default 1.0), REQUEST_TIMEOUT_SECONDS (default 30), USER_AGENT (default string)
     - Raise clear error on missing required variables
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
-  - [ ] 1.3 Set up SQLAlchemy async engine, session factory, and Base
+  - [x] 1.3 Set up SQLAlchemy async engine, session factory, and Base
     - Create `src/data/database.py` with async engine creation from DATABASE_URL, async session factory, and declarative Base
     - _Requirements: 6.1, 6.2, 6.3_
 
-  - [ ] 1.4 Define SQLAlchemy ORM models (Website, Feed, Article)
+  - [x] 1.4 Define SQLAlchemy ORM models (Website, Feed, Article)
     - Create `src/data/models.py` with Website, Feed, Article models matching the design schema
     - Website: id, name (unique), url (unique), domain (indexed), created_at, updated_at, last_discovery_at, discovery_status (default "pending")
     - Feed: id, website_id (FK, indexed), feed_url, title, feed_type, created_at, last_parsed_at; unique constraint on (website_id, feed_url)
@@ -38,12 +38,12 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - Test that inserting duplicate feed_url for same website_id or duplicate article url for same feed_id raises IntegrityError
     - **Validates: Requirements 6.5**
 
-  - [ ] 1.6 Define Pydantic request/response schemas
+  - [x] 1.6 Define Pydantic request/response schemas
     - Create `src/data/schemas.py` with: WebsiteCreate, WebsiteResponse, FeedResponse, ArticleResponse, ArticleDetailResponse, PaginatedResponse[T], BatchSummaryResponse, DiscoveryResponse, ParseResponse, ExtractBatchResponse, ErrorResponse, StatusResponse
     - Use `model_config = ConfigDict(from_attributes=True)` for ORM compatibility
     - _Requirements: 6.1, 6.2, 6.3, 9.1_
 
-  - [ ] 1.7 Set up Alembic for database migrations
+  - [x] 1.7 Set up Alembic for database migrations
     - Initialize Alembic with async PostgreSQL support
     - Create `alembic.ini` and `alembic/env.py` configured to use DATABASE_URL from environment
     - Generate initial migration from ORM models
