@@ -49,8 +49,8 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - Generate initial migration from ORM models
     - _Requirements: 6.1, 6.2, 6.3_
 
-- [ ] 2. Implement rate limiter and core services
-  - [ ] 2.1 Implement rate limiter service
+- [x] 2. Implement rate limiter and core services
+  - [x] 2.1 Implement rate limiter service
     - Create `src/services/rate_limiter.py` with `RateLimiter` class
     - Per-domain delay tracking using in-memory dict with domain → last_request_time
     - `async def acquire(domain: str)` that waits until delay_seconds have passed since last request to that domain
@@ -68,7 +68,7 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - For any 429 response with Retry-After header, next request to that domain is delayed by at least the specified duration
     - **Validates: Requirements 10.3**
 
-  - [ ] 2.4 Implement feed discovery service
+  - [x] 2.4 Implement feed discovery service
     - Create `src/services/discovery_service.py` with `FeedDiscoveryService` class
     - Accept httpx.AsyncClient and RateLimiter in constructor
     - `discover_feeds(website, db)`: fetch homepage HTML, parse `<link rel="alternate">` tags for RSS/Atom, probe common paths (/feed, /rss, /atom.xml, /feed.xml, /rss.xml, /index.xml, /feeds/all.atom.xml)
@@ -93,7 +93,7 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - For any outgoing HTTP request, User-Agent header is present and matches configured value
     - **Validates: Requirements 10.2**
 
-  - [ ] 2.8 Implement feed parser service
+  - [x] 2.8 Implement feed parser service
     - Create `src/services/parser_service.py` with `FeedParserService` class
     - Accept RateLimiter in constructor
     - `parse_feed(feed, db)`: use feedparser to retrieve and parse feed, extract title/link/published/author/summary from each entry, store raw entry as JSON in feedparser_raw_entry
@@ -112,7 +112,7 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - For any feed, parsing N times produces the same article set; count does not increase after first parse
     - **Validates: Requirements 3.3, 3.4**
 
-  - [ ] 2.11 Implement article extractor service
+  - [x] 2.11 Implement article extractor service
     - Create `src/services/extractor_service.py` with `ArticleExtractorService` class
     - Accept httpx.AsyncClient and RateLimiter in constructor
     - `extract_article(article, db)`: download HTML, store in original_html, extract text via Trafilatura, store in extracted_text, update status
@@ -126,7 +126,7 @@ Build a Python FastAPI service that discovers RSS/Atom feeds on registered websi
     - For any article with valid extractable HTML: original_html non-null, extracted_text non-null, status = "extracted"
     - **Validates: Requirements 4.1, 4.3, 4.4**
 
-  - [ ] 2.13 Implement batch processor service
+  - [x] 2.13 Implement batch processor service
     - Create `src/services/batch_service.py` with `BatchProcessor` class
     - Accept FeedParserService and ArticleExtractorService in constructor
     - `process_website(website, db)`: parse all feeds, then extract all new articles; continue on individual failures
