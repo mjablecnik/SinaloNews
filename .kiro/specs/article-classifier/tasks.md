@@ -190,7 +190,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - CLI usage examples
     - _Requirements: 10.4_
 
-- [ ] 11. Final checkpoint - Ensure all tests pass
+- [x] 11. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
