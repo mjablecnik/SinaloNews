@@ -138,7 +138,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
   - Register routes, global exception handler (500 with error type and message)
   - _Requirements: 9.2, 9.3, 9.4, 2.3_
 
-- [ ] 8. Checkpoint - Ensure all tests pass
+- [x] 8. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Create infrastructure and deployment files
