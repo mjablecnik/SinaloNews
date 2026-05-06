@@ -124,7 +124,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - For any valid sort_by field and sort_order, returned articles are ordered correctly
     - **Validates: Requirements 6.7, 6.8**
 
-  - [ ]* 6.6 Write property test for API pagination correctness (Property 8)
+  - [x]* 6.6 Write property test for API pagination correctness (Property 8)
     - **Property 8: API pagination correctness**
     - For any valid pagination params, response contains at most `size` items, total equals full count, pages equals ceil(total/size)
     - **Validates: Requirements 6.9**
