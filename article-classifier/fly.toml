@@ -1,0 +1,25 @@
+app = "sinalo-classifier"
+primary_region = "fra"
+
+[build]
+
+[env]
+APP_PORT = "8002"
+LLM_MODEL = "openai/gpt-4o-mini"
+BATCH_SIZE = "20"
+LANGSMITH_PROJECT = "sinalo-classifier"
+LANGSMITH_TRACING = "true"
+LLM_RETRY_DELAY_SECONDS = "5"
+LLM_MAX_RETRIES = "3"
+
+[http_service]
+internal_port = 8002
+force_https = true
+auto_stop_machines = true
+auto_start_machines = true
+min_machines_running = 0
+
+[[vm]]
+memory = "512mb"
+cpu_kind = "shared"
+cpus = 1

@@ -141,34 +141,34 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
 - [x] 8. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Create infrastructure and deployment files
-  - [ ] 9.1 Create Dockerfile with multi-stage build
+- [x] 9. Create infrastructure and deployment files
+  - [x] 9.1 Create Dockerfile with multi-stage build
     - Builder stage: python:3.12-slim, install hatchling, copy pyproject.toml, install deps to /app/deps, copy src
     - Production stage: python:3.12-slim, copy deps and src, set PYTHONPATH, expose 8002
     - Follow rag-agent Dockerfile pattern
     - _Requirements: 10.1_
 
-  - [ ] 9.2 Create fly.toml for Fly.io deployment
+  - [x] 9.2 Create fly.toml for Fly.io deployment
     - App name: "sinalo-classifier", region: "fra"
     - [env] section with non-sensitive config: APP_PORT, LLM_MODEL, BATCH_SIZE, LANGSMITH_PROJECT, LANGSMITH_TRACING, LLM_RETRY_DELAY_SECONDS, LLM_MAX_RETRIES
     - HTTP service on internal port 8002, auto_stop/auto_start machines
     - VM: 512mb shared CPU
     - _Requirements: 10.3_
 
-  - [ ] 9.3 Create scripts/start-docker.sh
+  - [x] 9.3 Create scripts/start-docker.sh
     - Parse APP_NAME from fly.toml
     - Build Docker image, stop/remove existing container, run with --env-file .env
     - Expose port 8002
     - _Requirements: 10.1_
 
-  - [ ] 9.4 Create scripts/fly-setup.sh
+  - [x] 9.4 Create scripts/fly-setup.sh
     - Parse APP_NAME from fly.toml
     - Create Fly.io app if needed
     - Set secrets from .env, skipping keys in fly.toml [env]
     - Follow rag-agent/scripts/fly-setup.sh pattern
     - _Requirements: 10.1_
 
-  - [ ] 9.5 Create scripts/classifier.sh CLI script
+  - [x] 9.5 Create scripts/classifier.sh CLI script
     - Commands: classify, status, articles (with filter flags), health, help
     - Filter flags: --category, --subcategory, --type, --min-score, --from, --to, --sort, --order, --page, --size, --json
     - Environment: CLASSIFIER_API_URL (default http://localhost:8002)
