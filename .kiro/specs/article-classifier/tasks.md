@@ -44,14 +44,14 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - Create migration `001_initial.py` that creates tags, classification_results, and article_tags tables
     - _Requirements: 2.4_
 
-- [ ] 3. Implement classification pipeline
-  - [ ] 3.1 Create schemas.py with Pydantic models
+- [x] 3. Implement classification pipeline
+  - [x] 3.1 Create schemas.py with Pydantic models
     - LLMClassificationResponse: tags (list of TagOutput), content_type (str), score (int), reason (str), summary (str)
     - TagOutput: category (str), subcategory (str)
     - API response schemas: ClassifiedArticleResponse, PaginatedResponse, ClassifyTriggerResponse, ClassifyStatusResponse, HealthResponse
     - _Requirements: 8.2, 6.11_
 
-  - [ ] 3.2 Implement pipeline.py with LangGraph classification pipeline
+  - [x] 3.2 Implement pipeline.py with LangGraph classification pipeline
     - Create ClassificationPipeline class using ChatOpenAI with OpenRouter base_url
     - Build LLM prompt in English that includes: article title, text, summary, full existing tag list, ContentType enum values, scoring criteria (Czech-focused), instruction for Czech summary output
     - Single LLM call returning structured JSON with all classification fields
