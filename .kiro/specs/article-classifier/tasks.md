@@ -75,7 +75,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - **Validates: Requirements 5.5**
 
 - [ ] 4. Implement classifier service with tag validation
-  - [ ] 4.1 Implement classifier_service.py — article fetching and batch orchestration
+  - [x] 4.1 Implement classifier_service.py — article fetching and batch orchestration
     - `get_unprocessed_articles()`: query articles with non-null, non-empty extracted_text and no classification_results record
     - `classify_batch()`: process one batch of articles through the pipeline
     - `run_classification()`: process all unprocessed articles in configurable batch sizes with in-memory lock to prevent concurrent runs
