@@ -97,20 +97,20 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
 - [x] 5. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Implement REST API routes
-  - [ ] 6.1 Implement routes.py — GET /api/articles with filtering, sorting, pagination
+- [x] 6. Implement REST API routes
+  - [x] 6.1 Implement routes.py — GET /api/articles with filtering, sorting, pagination
     - Query parameters: category, subcategory, content_type, min_score, date_from, date_to, sort_by (default: classified_at), sort_order (default: desc), page (default: 1), size (default: 20, max: 100)
     - AND logic for combined filters
     - Response includes: article id, title, url, author, published_at, tags, content_type, importance_score, summary, classified_at
     - Paginated response with total count and pages
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11_
 
-  - [ ] 6.2 Implement routes.py — POST /api/classify and GET /api/classify/status
+  - [x] 6.2 Implement routes.py — POST /api/classify and GET /api/classify/status
     - POST /api/classify: trigger async classification, return 202 with queued count, reject with 409 if already running
     - GET /api/classify/status: return current state (idle/processing, pending count, classified count)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-  - [ ] 6.3 Implement routes.py — GET /health endpoint
+  - [x] 6.3 Implement routes.py — GET /health endpoint
     - Check database connectivity, return 200 with status "ok" or 503 with "unavailable"
     - _Requirements: 9.1, 9.5_
 
