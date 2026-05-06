@@ -62,13 +62,6 @@ async def register_website(
             return WebsiteResponse.model_validate(existing)
         raise
 
-    # Auto-discover feeds for the newly registered website
-    try:
-        await discovery.discover_feeds(website, db)
-    except Exception:
-        pass  # Discovery failure should not prevent website registration
-
-    await db.refresh(website)
     return WebsiteResponse.model_validate(website)
 
 

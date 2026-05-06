@@ -5,7 +5,12 @@ from sqlalchemy.orm import DeclarativeBase
 
 from src.config import settings
 
-# asyncpg requires ssl context passed via connect_args for SSL connections
+
+class Base(DeclarativeBase):
+    pass
+
+
+# SSL context for cloud PostgreSQL providers
 _connect_args: dict = {}
 if settings.DATABASE_URL and ("neon.tech" in settings.DATABASE_URL or "supabase" in settings.DATABASE_URL):
     _ssl_context = ssl_module.create_default_context()
@@ -18,10 +23,6 @@ async_session_factory = async_sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False,
 )
-
-
-class Base(DeclarativeBase):
-    pass
 
 
 async def get_db() -> AsyncSession:

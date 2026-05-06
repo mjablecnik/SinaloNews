@@ -88,13 +88,13 @@ class FeedParserService:
                 status="pending",
                 feedparser_raw_entry=raw_entry,
             )
-            db.add(article)
             try:
-                await db.flush()
+                async with db.begin_nested():
+                    db.add(article)
+                    await db.flush()
                 new_articles.append(article)
                 log.debug("article_created", url=url)
             except IntegrityError:
-                await db.rollback()
                 log.debug("article_already_exists", url=url)
 
         feed.last_parsed_at = datetime.utcnow()

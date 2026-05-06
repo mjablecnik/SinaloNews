@@ -120,13 +120,13 @@ class FeedDiscoveryService:
                 title=None,
                 feed_type=validated_type or feed_type_hint or None,
             )
-            db.add(feed)
             try:
-                await db.flush()
+                async with db.begin_nested():
+                    db.add(feed)
+                    await db.flush()
                 new_feeds.append(feed)
                 log.info("feed_discovered", feed_url=url)
             except IntegrityError:
-                await db.rollback()
                 log.debug("feed_already_exists", feed_url=url)
 
         website.last_discovery_at = datetime.now(timezone.utc).replace(tzinfo=None)
