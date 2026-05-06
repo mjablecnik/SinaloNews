@@ -6,23 +6,23 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
 
 ## Tasks
 
-- [ ] 1. Set up project structure and configuration
-  - [ ] 1.1 Create project skeleton with pyproject.toml, .gitignore, .dockerignore
+- [x] 1. Set up project structure and configuration
+  - [x] 1.1 Create project skeleton with pyproject.toml, .gitignore, .dockerignore
     - Create `article-classifier/` directory with `pyproject.toml` (hatchling build, dependencies: fastapi, uvicorn, sqlalchemy[asyncio], asyncpg, langchain-openai, langgraph, langsmith, pydantic-settings, structlog, alembic; dev: pytest, pytest-asyncio, hypothesis, respx, httpx)
     - Create `.gitignore` and `.dockerignore` following rag-agent patterns
     - _Requirements: 10.1_
 
-  - [ ] 1.2 Implement config.py with pydantic-settings
+  - [x] 1.2 Implement config.py with pydantic-settings
     - Create `src/__init__.py` and `src/config.py` with Settings class
     - Required: DATABASE_URL, OPENROUTER_API_KEY
     - Optional with defaults: APP_PORT (8002), LLM_MODEL ("openai/gpt-4o-mini"), BATCH_SIZE (20), LLM_RETRY_DELAY_SECONDS (5), LLM_MAX_RETRIES (3), LANGSMITH_API_KEY, LANGSMITH_PROJECT ("sinalo-classifier"), LANGSMITH_TRACING ("true")
     - _Requirements: 10.1, 10.2, 10.3_
 
-  - [ ] 1.3 Create .env.example with all environment variables documented
+  - [x] 1.3 Create .env.example with all environment variables documented
     - Include all required and optional variables with placeholder values and comments
     - _Requirements: 10.4_
 
-  - [ ] 1.4 Create constants.py with TAG_TAXONOMY and ContentType enum
+  - [x] 1.4 Create constants.py with TAG_TAXONOMY and ContentType enum
     - Define `TAG_TAXONOMY` dict with 7 main categories and their subcategories (categories are fixed, subcategories are dynamically expandable)
     - Define `ContentType` string enum with 7 values
     - _Requirements: 2.3, 3.1_
