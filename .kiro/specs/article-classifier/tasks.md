@@ -114,7 +114,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - Check database connectivity, return 200 with status "ok" or 503 with "unavailable"
     - _Requirements: 9.1, 9.5_
 
-  - [ ]* 6.4 Write property test for API filtering correctness (Property 6)
+  - [x]* 6.4 Write property test for API filtering correctness (Property 6)
     - **Property 6: API filtering correctness**
     - For any set of classified articles and filter combinations, every returned article satisfies ALL applied filters (AND logic)
     - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.10**
@@ -129,7 +129,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - For any valid pagination params, response contains at most `size` items, total equals full count, pages equals ceil(total/size)
     - **Validates: Requirements 6.9**
 
-- [ ] 7. Implement main.py with FastAPI app and lifespan
+- [x] 7. Implement main.py with FastAPI app and lifespan
   - Create FastAPI app with lifespan handler
   - Configure structlog with JSON output
   - Configure LangSmith tracing in lifespan
