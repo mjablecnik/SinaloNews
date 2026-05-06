@@ -27,19 +27,19 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - Define `ContentType` string enum with 7 values
     - _Requirements: 2.3, 3.1_
 
-- [ ] 2. Implement database layer
-  - [ ] 2.1 Create database.py with async SQLAlchemy engine and session factory
+- [x] 2. Implement database layer
+  - [x] 2.1 Create database.py with async SQLAlchemy engine and session factory
     - Async engine with asyncpg, session factory, SSL handling
     - Follow rag-agent/rss-feed database patterns
     - _Requirements: 1.1_
 
-  - [ ] 2.2 Create models.py with SQLAlchemy ORM models
+  - [x] 2.2 Create models.py with SQLAlchemy ORM models
     - Tag model: id, name (String 50), parent_id (self-referencing FK, nullable), created_at; UNIQUE(parent_id, name)
     - ClassificationResult model: id, article_id (FK articles.id, UNIQUE), content_type, importance_score (CHECK 0-10), summary, reason, llm_model, token_usage, processing_time_ms, classified_at
     - ArticleTag model: id, classification_result_id (FK), tag_id (FK), created_at; UNIQUE(classification_result_id, tag_id)
     - _Requirements: 2.4, 8.4, 8.7_
 
-  - [ ] 2.3 Create Alembic migration for initial schema
+  - [x] 2.3 Create Alembic migration for initial schema
     - Set up alembic.ini and alembic/env.py
     - Create migration `001_initial.py` that creates tags, classification_results, and article_tags tables
     - _Requirements: 2.4_
