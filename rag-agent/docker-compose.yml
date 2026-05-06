@@ -1,5 +1,5 @@
 services:
-  ai-agent:
+  rag-agent:
     build: .
     env_file: .env
     ports:

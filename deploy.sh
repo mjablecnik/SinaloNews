@@ -1,9 +1,9 @@
 #!/bin/sh
-# deploy.sh — Deploy rss-feed and ai-agent services to Fly.io
+# deploy.sh — Deploy rss-feed and rag-agent services to Fly.io
 # Usage:
 #   ./deploy.sh          Deploy both services
 #   ./deploy.sh rss      Deploy only rss-feed
-#   ./deploy.sh agent    Deploy only ai-agent
+#   ./deploy.sh agent    Deploy only rag-agent
 #   ./deploy.sh setup    Run fly-setup.sh for both (create apps + set secrets)
 
 set -e
@@ -20,7 +20,7 @@ deploy_rss() {
 
 deploy_agent() {
     echo "=== Deploying ai-news-agent ==="
-    cd "$ROOT_DIR/ai-agent"
+    cd "$ROOT_DIR/rag-agent"
     fly deploy
     echo "=== ai-news-agent deployed ==="
     echo ""
@@ -35,7 +35,7 @@ setup_rss() {
 
 setup_agent() {
     echo "=== Setting up ai-news-agent ==="
-    cd "$ROOT_DIR/ai-agent"
+    cd "$ROOT_DIR/rag-agent"
     sh scripts/fly-setup.sh
     echo ""
 }

@@ -1,6 +1,6 @@
 #!/bin/sh
 # CLI client for the AI News Agent
-# Usage: ai-agent <command> [options]
+# Usage: rag-agent <command> [options]
 
 set -e
 
@@ -18,7 +18,7 @@ AI_AGENT_URL="${AI_AGENT_URL:-http://localhost:8001}"
 
 usage() {
     cat <<EOF
-Usage: ai-agent <command> [options]
+Usage: rag-agent <command> [options]
 
 Commands:
   query [--json] "text"   Ask the agent a question
@@ -33,10 +33,10 @@ Environment:
   AI_AGENT_URL  Base URL of the agent server (default: http://localhost:8001)
 
 Examples:
-  ai-agent query "What happened in AI today?"
-  ai-agent query --json "Latest news about Python"
-  ai-agent status
-  ai-agent index
+  rag-agent query "What happened in AI today?"
+  rag-agent query --json "Latest news about Python"
+  rag-agent status
+  rag-agent index
 EOF
 }
 
@@ -73,7 +73,7 @@ do_query() {
 
     if [ -z "$query_text" ]; then
         echo "Error: query text is required." >&2
-        echo "Usage: ai-agent query [--json] \"your question\"" >&2
+        echo "Usage: rag-agent query [--json] \"your question\"" >&2
         exit 1
     fi
 
@@ -216,7 +216,7 @@ case "$command" in
         ;;
     *)
         echo "Error: unknown command '${command}'" >&2
-        echo "Run 'ai-agent help' for usage." >&2
+        echo "Run 'rag-agent help' for usage." >&2
         exit 1
         ;;
 esac

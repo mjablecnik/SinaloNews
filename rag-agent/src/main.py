@@ -88,12 +88,12 @@ async def lifespan(app: FastAPI):
     app.state.indexer = indexer
     app.state.agent = agent
 
-    log.info("ai_agent_startup", port=settings.APP_PORT, model=settings.LLM_MODEL)
+    log.info("rag_agent_startup", port=settings.APP_PORT, model=settings.LLM_MODEL)
     yield
 
     await qdrant_client.close()
     await engine.dispose()
-    log.info("ai_agent_shutdown")
+    log.info("rag_agent_shutdown")
 
 
 app = FastAPI(title="AI News Agent", lifespan=lifespan)

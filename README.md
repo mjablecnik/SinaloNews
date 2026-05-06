@@ -32,7 +32,7 @@ Key flow: **Index articles → User asks question → Semantic search → LLM ge
 
 - Python 3.11+, FastAPI, SQLAlchemy (async), PostgreSQL, structlog
 - feedparser, Trafilatura, httpx (rss-feed)
-- Qdrant, LangChain, LangGraph, OpenRouter (ai-agent)
+- Qdrant, LangChain, LangGraph, OpenRouter (rag-agent)
 
 ## Quick Start
 
@@ -44,11 +44,11 @@ cp rss-feed/.env.example rss-feed/.env
 docker compose -f rss-feed/docker-compose.yml up --build
 
 # 2. AI News Agent
-cp ai-agent/.env.example ai-agent/.env
-# Set OPENROUTER_API_KEY in ai-agent/.env
-docker compose -f ai-agent/docker-compose.yml up --build
+cp rag-agent/.env.example rag-agent/.env
+# Set OPENROUTER_API_KEY in rag-agent/.env
+docker compose -f rag-agent/docker-compose.yml up --build
 ```
 
 See individual service READMEs for detailed setup, CLI usage, and Fly.io deployment instructions:
 - [rss-feed/README.md](rss-feed/README.md)
-- [ai-agent/README.md](ai-agent/README.md)
+- [rag-agent/README.md](rag-agent/README.md)

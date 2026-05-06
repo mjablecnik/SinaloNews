@@ -27,33 +27,33 @@ Edit `.env` and set at minimum:
 docker compose up -d
 ```
 
-This starts the `ai-agent` service on port 8001 and a local Qdrant instance on port 6333 with a persistent volume.
+This starts the `rag-agent` service on port 8001 and a local Qdrant instance on port 6333 with a persistent volume.
 
 3. Index articles:
 
 ```sh
-./scripts/ai-agent.sh index
+./scripts/rag-agent.sh index
 ```
 
 ## CLI Usage
 
-The CLI script (`scripts/ai-agent.sh`) communicates with the agent server. Set `AI_AGENT_URL` if the server is not on `http://localhost:8001`.
+The CLI script (`scripts/rag-agent.sh`) communicates with the agent server. Set `AI_AGENT_URL` if the server is not on `http://localhost:8001`.
 
 ```sh
 # Ask a question
-./scripts/ai-agent.sh query "What happened in AI this week?"
+./scripts/rag-agent.sh query "What happened in AI this week?"
 
 # Ask and get raw JSON
-./scripts/ai-agent.sh query --json "Latest news about Python"
+./scripts/rag-agent.sh query --json "Latest news about Python"
 
 # Show indexing statistics
-./scripts/ai-agent.sh status
+./scripts/rag-agent.sh status
 
 # Trigger article indexing
-./scripts/ai-agent.sh index
+./scripts/rag-agent.sh index
 
 # Show help
-./scripts/ai-agent.sh help
+./scripts/rag-agent.sh help
 ```
 
 ## API Endpoints
