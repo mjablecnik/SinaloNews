@@ -1,4 +1,4 @@
-app = "ai-news-agent"
+app = "sinalo-rag-agent"
 primary_region = "fra"
 
 [build]

@@ -1,4 +1,4 @@
-app = "rss-feed-pipeline"
+app = "sinalo-feed"
 primary_region = "fra"
 
 [build]
