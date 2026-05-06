@@ -1,5 +1,5 @@
 app = "ai-news-agent"
-primary_region = "ams"
+primary_region = "fra"
 
 [build]
 

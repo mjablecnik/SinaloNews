@@ -1,6 +1,17 @@
 #!/bin/sh
 # feed-parser.sh — CLI client for RSS Feed Pipeline API
 
+# Load .env file safely (skip comments, handle special chars)
+_script_dir="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
+_env_file="${_script_dir}/../.env"
+if [ ! -f "$_env_file" ]; then
+    _env_file="./.env"
+fi
+if [ -f "$_env_file" ]; then
+    # Use grep to extract only valid KEY=VALUE lines, then export them
+    eval $(grep -v '^\s*#' "$_env_file" | grep -v '^\s*$' | sed 's/\r$//' | sed "s/'/'\\\\''/g" | sed "s/=\(.*\)/='\1'/" | sed 's/^/export /')
+fi
+
 API_URL="${FEED_PARSER_API_URL:-http://localhost:8000}"
 JSON_OUTPUT=0
 
@@ -16,21 +27,33 @@ require_cmd curl
 require_cmd jq
 
 api_get() {
-    curl -sf -w '\n%{http_code}' "$API_URL$1"
+    _tmpfile=$(mktemp)
+    _code=$(curl -s -o "$_tmpfile" -w '%{http_code}' "$API_URL$1")
+    _body=$(cat "$_tmpfile")
+    rm -f "$_tmpfile"
+    printf '%s\n%s' "$_body" "$_code"
 }
 
 api_post() {
-    curl -sf -w '\n%{http_code}' -X POST -H "Content-Type: application/json" -d "${2:-{\}}" "$API_URL$1"
+    _tmpfile=$(mktemp)
+    _code=$(curl -s -o "$_tmpfile" -w '%{http_code}' -X POST -H "Content-Type: application/json" -d "${2:-{\}}" "$API_URL$1")
+    _body=$(cat "$_tmpfile")
+    rm -f "$_tmpfile"
+    printf '%s\n%s' "$_body" "$_code"
 }
 
 api_delete() {
-    curl -sf -w '\n%{http_code}' -X DELETE "$API_URL$1"
+    _tmpfile=$(mktemp)
+    _code=$(curl -s -o "$_tmpfile" -w '%{http_code}' -X DELETE "$API_URL$1")
+    _body=$(cat "$_tmpfile")
+    rm -f "$_tmpfile"
+    printf '%s\n%s' "$_body" "$_code"
 }
 
 # Split response body and status code (last line is the code)
 parse_response() {
-    body=$(printf '%s' "$1" | head -n -1)
-    code=$(printf '%s' "$1" | tail -n 1)
+    code=$(printf '%s\n' "$1" | tail -n 1)
+    body=$(printf '%s\n' "$1" | sed '$d')
 }
 
 check_error() {

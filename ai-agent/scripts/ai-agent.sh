@@ -4,6 +4,16 @@
 
 set -e
 
+# Load .env file safely (skip comments, handle special chars)
+_script_dir="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
+_env_file="${_script_dir}/../.env"
+if [ ! -f "$_env_file" ]; then
+    _env_file="./.env"
+fi
+if [ -f "$_env_file" ]; then
+    eval $(grep -v '^\s*#' "$_env_file" | grep -v '^\s*$' | sed 's/\r$//' | sed "s/'/'\\\\''/g" | sed "s/=\(.*\)/='\1'/" | sed 's/^/export /')
+fi
+
 AI_AGENT_URL="${AI_AGENT_URL:-http://localhost:8001}"
 
 usage() {

@@ -1,5 +1,5 @@
 app = "rss-feed-pipeline"
-primary_region = "ams"
+primary_region = "fra"
 
 [build]
 
