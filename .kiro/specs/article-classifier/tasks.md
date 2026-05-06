@@ -175,8 +175,8 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - Follow feed-parser.sh pattern (POSIX sh, .env loading, curl+jq)
     - _Requirements: 7.1, 7.4, 6.1, 9.1_
 
-- [ ] 10. Update deploy.sh and create README.md
-  - [ ] 10.1 Update root deploy.sh to include article-classifier service
+- [x] 10. Update deploy.sh and create README.md
+  - [x] 10.1 Update root deploy.sh to include article-classifier service
     - Add `deploy_classifier()` function deploying article-classifier to Fly.io
     - Add `setup_classifier()` function running fly-setup.sh
     - Add `run_migrations_classifier()` function running alembic upgrade head via fly ssh
@@ -184,7 +184,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - Update "setup" and "all" options to include classifier
     - Update usage text
 
-  - [ ] 10.2 Create README.md with setup and deployment instructions
+  - [x] 10.2 Create README.md with setup and deployment instructions
     - Local Docker setup (copy .env.example, start-docker.sh, connects to remote PostgreSQL)
     - Fly.io deployment (fly-setup.sh, fly deploy)
     - CLI usage examples

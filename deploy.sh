@@ -1,10 +1,11 @@
 #!/bin/sh
-# deploy.sh — Deploy rss-feed and rag-agent services to Fly.io
+# deploy.sh — Deploy rss-feed, rag-agent, and article-classifier services to Fly.io
 # Usage:
-#   ./deploy.sh          Deploy both services
-#   ./deploy.sh rss      Deploy only rss-feed
-#   ./deploy.sh agent    Deploy only rag-agent
-#   ./deploy.sh setup    Run fly-setup.sh for both (create apps + set secrets)
+#   ./deploy.sh              Deploy all services
+#   ./deploy.sh rss          Deploy only rss-feed
+#   ./deploy.sh agent        Deploy only rag-agent
+#   ./deploy.sh classifier   Deploy only article-classifier
+#   ./deploy.sh setup        Run fly-setup.sh for all (create apps + set secrets)
 
 set -e
 
@@ -40,6 +41,28 @@ setup_agent() {
     echo ""
 }
 
+deploy_classifier() {
+    echo "=== Deploying article-classifier ==="
+    cd "$ROOT_DIR/article-classifier"
+    fly deploy
+    echo "=== article-classifier deployed ==="
+    echo ""
+}
+
+setup_classifier() {
+    echo "=== Setting up article-classifier ==="
+    cd "$ROOT_DIR/article-classifier"
+    sh scripts/fly-setup.sh
+    echo ""
+}
+
+run_migrations_classifier() {
+    echo "=== Running article-classifier migrations ==="
+    APP_NAME=$(grep '^app\s*=' "$ROOT_DIR/article-classifier/fly.toml" | head -1 | sed 's/^app\s*=\s*"\(.*\)"/\1/')
+    fly ssh console --app "$APP_NAME" -C "python -m alembic upgrade head"
+    echo ""
+}
+
 run_migrations_rss() {
     echo "=== Running rss-feed migrations ==="
     APP_NAME=$(grep '^app\s*=' "$ROOT_DIR/rss-feed/fly.toml" | head -1 | sed 's/^app\s*=\s*"\(.*\)"/\1/')
@@ -55,22 +78,30 @@ case "${1:-all}" in
     agent)
         deploy_agent
         ;;
+    classifier)
+        deploy_classifier
+        run_migrations_classifier
+        ;;
     setup)
         setup_rss
         setup_agent
+        setup_classifier
         ;;
     all)
         deploy_rss
         run_migrations_rss
         deploy_agent
+        deploy_classifier
+        run_migrations_classifier
         ;;
     *)
-        echo "Usage: ./deploy.sh [rss|agent|setup|all]"
+        echo "Usage: ./deploy.sh [rss|agent|classifier|setup|all]"
         echo ""
-        echo "  rss     Deploy rss-feed-pipeline only"
-        echo "  agent   Deploy ai-news-agent only"
-        echo "  setup   Create Fly apps and set secrets (run once)"
-        echo "  all     Deploy both services (default)"
+        echo "  rss          Deploy rss-feed-pipeline only"
+        echo "  agent        Deploy ai-news-agent only"
+        echo "  classifier   Deploy article-classifier only"
+        echo "  setup        Create Fly apps and set secrets (run once)"
+        echo "  all          Deploy all services (default)"
         exit 1
         ;;
 esac
