@@ -59,17 +59,17 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - Handle non-retryable errors by raising appropriate exceptions
     - _Requirements: 8.1, 8.2, 8.3, 8.5, 8.6, 2.2, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4_
 
-  - [ ]* 3.3 Write property test for content type validation (Property 3)
+  - [x]* 3.3 Write property test for content type validation (Property 3)
     - **Property 3: Content type validation with fallback**
     - For any string value, validation returns the same value if it matches ContentType enum, or GENERAL_VALUABLE_CONTENT otherwise
     - **Validates: Requirements 3.1, 3.3**
 
-  - [ ]* 3.4 Write property test for score clamping (Property 4)
+  - [x]* 3.4 Write property test for score clamping (Property 4)
     - **Property 4: Score clamping**
     - For any integer value, clamping returns max(0, min(10, value))
     - **Validates: Requirements 4.1, 4.5**
 
-  - [ ]* 3.5 Write property test for short text bypass (Property 5)
+  - [x]* 3.5 Write property test for short text bypass (Property 5)
     - **Property 5: Short text bypass**
     - For any article with extracted_text < 100 characters, the text is used directly as summary without LLM
     - **Validates: Requirements 5.5**
@@ -94,7 +94,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - For any list of tag objects, validation maps known tags directly, runs dedup for unknown, and ensures 1-5 final tags
     - **Validates: Requirements 2.2, 2.5, 2.6, 2.7, 2.8**
 
-- [ ] 5. Checkpoint - Ensure all tests pass
+- [x] 5. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Implement REST API routes
