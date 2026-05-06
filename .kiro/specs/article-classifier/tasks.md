@@ -74,7 +74,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - For any article with extracted_text < 100 characters, the text is used directly as summary without LLM
     - **Validates: Requirements 5.5**
 
-- [ ] 4. Implement classifier service with tag validation
+- [x] 4. Implement classifier service with tag validation
   - [x] 4.1 Implement classifier_service.py — article fetching and batch orchestration
     - `get_unprocessed_articles()`: query articles with non-null, non-empty extracted_text and no classification_results record
     - `classify_batch()`: process one batch of articles through the pipeline
@@ -84,12 +84,12 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - Handle failed articles: log error, mark as failed, continue to next
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.5, 2.6, 2.7, 2.8, 8.4, 8.6, 8.7_
 
-  - [ ]* 4.2 Write property test for unprocessed article selection (Property 1)
+  - [x]* 4.2 Write property test for unprocessed article selection (Property 1)
     - **Property 1: Unprocessed article selection**
     - For any set of articles with varying extracted_text states and classification results, fetch returns exactly those with non-null, non-empty extracted_text and no classification result
     - **Validates: Requirements 1.1, 1.3**
 
-  - [ ]* 4.3 Write property test for tag validation and deduplication (Property 2)
+  - [x]* 4.3 Write property test for tag validation and deduplication (Property 2)
     - **Property 2: Tag validation and deduplication**
     - For any list of tag objects, validation maps known tags directly, runs dedup for unknown, and ensures 1-5 final tags
     - **Validates: Requirements 2.2, 2.5, 2.6, 2.7, 2.8**
