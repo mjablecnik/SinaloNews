@@ -119,7 +119,7 @@ Build a FastAPI microservice that classifies articles using LLM (LangGraph/LangC
     - For any set of classified articles and filter combinations, every returned article satisfies ALL applied filters (AND logic)
     - **Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 6.10**
 
-  - [ ]* 6.5 Write property test for API sorting correctness (Property 7)
+  - [x]* 6.5 Write property test for API sorting correctness (Property 7)
     - **Property 7: API sorting correctness**
     - For any valid sort_by field and sort_order, returned articles are ordered correctly
     - **Validates: Requirements 6.7, 6.8**

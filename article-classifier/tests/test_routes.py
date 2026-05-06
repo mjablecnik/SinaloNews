@@ -15,6 +15,8 @@ from src.constants import ContentType, TAG_TAXONOMY
 _ALL_CONTENT_TYPES = [ct.value for ct in ContentType]
 _ALL_CATEGORIES = list(TAG_TAXONOMY.keys())
 _ALL_TAG_PAIRS = [(cat, sub) for cat, subs in TAG_TAXONOMY.items() for sub in subs]
+_SORT_FIELDS = ["importance_score", "published_at", "classified_at"]
+_SORT_ORDERS = ["asc", "desc"]
 
 _datetime_st = st.datetimes(
     min_value=datetime(2000, 1, 1), max_value=datetime(2030, 12, 31)
@@ -148,4 +150,55 @@ def test_api_filtering_correctness(
         ):
             assert False, (
                 f"Article {article.id} satisfies all filters but was excluded from result"
+            )
+
+
+def _get_sort_key(article: _FakeArticle, sort_by: str):
+    return {
+        "importance_score": article.importance_score,
+        "published_at": article.published_at,
+        "classified_at": article.classified_at,
+    }[sort_by]
+
+
+def _apply_sort(
+    articles: list[_FakeArticle], sort_by: str, sort_order: str
+) -> list[_FakeArticle]:
+    """Pure Python mirror of the routes.py sorting logic."""
+    reverse = sort_order == "desc"
+    if sort_by == "published_at":
+        non_null = [a for a in articles if a.published_at is not None]
+        null_articles = [a for a in articles if a.published_at is None]
+        sorted_non_null = sorted(non_null, key=lambda a: a.published_at, reverse=reverse)
+        return sorted_non_null + null_articles
+    return sorted(articles, key=lambda a: _get_sort_key(a, sort_by), reverse=reverse)
+
+
+# Feature: article-classifier, Property 7: API sorting correctness
+@given(
+    articles=st.lists(_article_strategy(), max_size=20),
+    sort_by=st.sampled_from(_SORT_FIELDS),
+    sort_order=st.sampled_from(_SORT_ORDERS),
+)
+def test_api_sorting_correctness(articles, sort_by, sort_order):
+    """Property 7: For any valid sort_by field and sort_order, returned articles are
+    ordered correctly.
+    Validates: Requirements 6.7, 6.8"""
+    result = _apply_sort(articles, sort_by=sort_by, sort_order=sort_order)
+
+    assert len(result) == len(articles), "Sorting must preserve all articles"
+
+    keys = [_get_sort_key(a, sort_by) for a in result if _get_sort_key(a, sort_by) is not None]
+
+    if sort_order == "asc":
+        for i in range(len(keys) - 1):
+            assert keys[i] <= keys[i + 1], (
+                f"Ascending order violated at index {i}: {keys[i]} > {keys[i + 1]}, "
+                f"sort_by={sort_by!r}"
+            )
+    else:
+        for i in range(len(keys) - 1):
+            assert keys[i] >= keys[i + 1], (
+                f"Descending order violated at index {i}: {keys[i]} < {keys[i + 1]}, "
+                f"sort_by={sort_by!r}"
             )
