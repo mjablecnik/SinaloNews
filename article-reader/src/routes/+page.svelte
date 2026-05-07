@@ -1,8 +1,9 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { invalidate, goto } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import { navigating } from '$app/stores';
 	import type { CategoryCount } from '$lib/types';
+	import CategoryCard from '$lib/components/CategoryCard.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
@@ -11,6 +12,7 @@
 	let { data }: { data: PageData } = $props();
 	let loading = $state(!data.categories.length && !data.error);
 
+	// Apply saved order to categories
 	function getOrderedCategories(categories: CategoryCount[]): CategoryCount[] {
 		if (typeof localStorage === 'undefined') return categories;
 		try {
@@ -26,6 +28,7 @@
 					map.delete(name);
 				}
 			}
+			// Append any new categories not in saved order
 			for (const cat of map.values()) {
 				ordered.push(cat);
 			}
@@ -45,23 +48,76 @@
 		orderedCategories = getOrderedCategories(data.categories);
 	});
 
-	function moveUp(index: number) {
-		if (index <= 0) return;
-		const items = [...orderedCategories];
-		[items[index - 1], items[index]] = [items[index], items[index - 1]];
-		orderedCategories = items;
-		saveOrder(items);
+	// Drag and drop state
+	let dragIndex = $state<number | null>(null);
+	let dragOverIndex = $state<number | null>(null);
+
+	function handleDragStart(index: number) {
+		dragIndex = index;
 	}
 
-	function moveDown(index: number) {
-		if (index >= orderedCategories.length - 1) return;
-		const items = [...orderedCategories];
-		[items[index], items[index + 1]] = [items[index + 1], items[index]];
-		orderedCategories = items;
-		saveOrder(items);
+	function handleDragOver(e: DragEvent, index: number) {
+		e.preventDefault();
+		dragOverIndex = index;
 	}
 
-	let editMode = $state(false);
+	function handleDrop(index: number) {
+		if (dragIndex === null || dragIndex === index) {
+			dragIndex = null;
+			dragOverIndex = null;
+			return;
+		}
+		const items = [...orderedCategories];
+		const [moved] = items.splice(dragIndex, 1);
+		items.splice(index, 0, moved);
+		orderedCategories = items;
+		saveOrder(items);
+		dragIndex = null;
+		dragOverIndex = null;
+	}
+
+	function handleDragEnd() {
+		dragIndex = null;
+		dragOverIndex = null;
+	}
+
+	// Touch drag support
+	let touchStartY = $state(0);
+	let touchDragIndex = $state<number | null>(null);
+
+	function handleTouchStart(e: TouchEvent, index: number) {
+		touchStartY = e.touches[0].clientY;
+		touchDragIndex = index;
+	}
+
+	function handleTouchMove(e: TouchEvent) {
+		if (touchDragIndex === null) return;
+		e.preventDefault();
+		const touch = e.touches[0];
+		const elements = document.querySelectorAll('[data-cat-index]');
+		for (const el of elements) {
+			const rect = el.getBoundingClientRect();
+			if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+				const idx = parseInt(el.getAttribute('data-cat-index') ?? '-1');
+				if (idx >= 0 && idx !== touchDragIndex) {
+					dragOverIndex = idx;
+				}
+				break;
+			}
+		}
+	}
+
+	function handleTouchEnd() {
+		if (touchDragIndex !== null && dragOverIndex !== null && touchDragIndex !== dragOverIndex) {
+			const items = [...orderedCategories];
+			const [moved] = items.splice(touchDragIndex, 1);
+			items.splice(dragOverIndex, 0, moved);
+			orderedCategories = items;
+			saveOrder(items);
+		}
+		touchDragIndex = null;
+		dragOverIndex = null;
+	}
 
 	function reload() {
 		invalidate('app:home');
@@ -69,17 +125,7 @@
 </script>
 
 <main class="container mx-auto max-w-2xl px-4 py-8">
-	<div class="mb-6 flex items-center justify-between">
-		<h1 class="text-2xl font-bold text-gray-900">Article Reader</h1>
-		{#if orderedCategories.length > 0}
-			<button
-				onclick={() => { editMode = !editMode; }}
-				class="rounded px-3 py-1 text-sm {editMode ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}"
-			>
-				{editMode ? '✓ Done' : '↕ Reorder'}
-			</button>
-		{/if}
-	</div>
+	<h1 class="mb-6 text-2xl font-bold text-gray-900">Article Reader</h1>
 
 	{#if $navigating || loading}
 		<LoadingSpinner />
@@ -90,28 +136,19 @@
 	{:else}
 		<div class="flex flex-col gap-3">
 			{#each orderedCategories as cat, i}
-				<div class="flex items-center gap-2">
-					{#if editMode}
-						<div class="flex flex-col gap-0.5">
-							<button
-								onclick={() => moveUp(i)}
-								disabled={i === 0}
-								class="rounded px-1.5 py-0.5 text-xs text-gray-500 hover:bg-gray-200 disabled:opacity-30"
-							>▲</button>
-							<button
-								onclick={() => moveDown(i)}
-								disabled={i === orderedCategories.length - 1}
-								class="rounded px-1.5 py-0.5 text-xs text-gray-500 hover:bg-gray-200 disabled:opacity-30"
-							>▼</button>
-						</div>
-					{/if}
-					<button
-						onclick={() => goto(`/category/${encodeURIComponent(cat.category)}`)}
-						class="flex flex-1 items-center justify-between rounded-lg border border-gray-200 bg-white p-4 text-left shadow-sm hover:border-blue-300 hover:shadow-md transition-all"
-					>
-						<span class="text-base font-semibold text-gray-900">{cat.category}</span>
-						<span class="text-sm text-gray-500">{cat.count}</span>
-					</button>
+				<div
+					data-cat-index={i}
+					draggable="true"
+					ondragstart={() => handleDragStart(i)}
+					ondragover={(e) => handleDragOver(e, i)}
+					ondrop={() => handleDrop(i)}
+					ondragend={handleDragEnd}
+					ontouchstart={(e) => handleTouchStart(e, i)}
+					ontouchmove={(e) => handleTouchMove(e)}
+					ontouchend={handleTouchEnd}
+					class="transition-transform {dragOverIndex === i ? 'border-t-2 border-blue-400' : ''} {dragIndex === i || touchDragIndex === i ? 'opacity-50' : ''}"
+				>
+					<CategoryCard category={cat.category} count={cat.count} />
 				</div>
 			{/each}
 		</div>
