@@ -283,7 +283,7 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Test: Reload button re-fetches without triggering classification
     - _Requirements: 1.5, 2.9, 6.6, 6.7_
 
-- [ ] 11. Final checkpoint - Ensure all tests pass
+- [x] 11. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
