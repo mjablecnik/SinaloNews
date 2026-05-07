@@ -81,17 +81,34 @@
 		dragOverIndex = null;
 	}
 
-	// Touch drag support
+	// Touch drag support with long-press detection
 	let touchStartY = $state(0);
 	let touchDragIndex = $state<number | null>(null);
+	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+	let isDragging = $state(false);
 
 	function handleTouchStart(e: TouchEvent, index: number) {
 		touchStartY = e.touches[0].clientY;
-		touchDragIndex = index;
+		isDragging = false;
+		// Start long-press timer (500ms)
+		longPressTimer = setTimeout(() => {
+			touchDragIndex = index;
+			isDragging = true;
+			// Vibrate for haptic feedback if available
+			if (navigator.vibrate) navigator.vibrate(50);
+		}, 500);
 	}
 
 	function handleTouchMove(e: TouchEvent) {
-		if (touchDragIndex === null) return;
+		// If not yet in drag mode, cancel long-press if finger moved too much (scrolling)
+		if (!isDragging) {
+			const dy = Math.abs(e.touches[0].clientY - touchStartY);
+			if (dy > 10 && longPressTimer) {
+				clearTimeout(longPressTimer);
+				longPressTimer = null;
+			}
+			return;
+		}
 		e.preventDefault();
 		const touch = e.touches[0];
 		const elements = document.querySelectorAll('[data-cat-index]');
@@ -108,7 +125,11 @@
 	}
 
 	function handleTouchEnd() {
-		if (touchDragIndex !== null && dragOverIndex !== null && touchDragIndex !== dragOverIndex) {
+		if (longPressTimer) {
+			clearTimeout(longPressTimer);
+			longPressTimer = null;
+		}
+		if (isDragging && touchDragIndex !== null && dragOverIndex !== null && touchDragIndex !== dragOverIndex) {
 			const items = [...orderedCategories];
 			const [moved] = items.splice(touchDragIndex, 1);
 			items.splice(dragOverIndex, 0, moved);
@@ -117,6 +138,7 @@
 		}
 		touchDragIndex = null;
 		dragOverIndex = null;
+		isDragging = false;
 	}
 
 	function reload() {
@@ -146,7 +168,7 @@
 					ontouchstart={(e) => handleTouchStart(e, i)}
 					ontouchmove={(e) => handleTouchMove(e)}
 					ontouchend={handleTouchEnd}
-					class="select-none touch-none transition-transform {dragOverIndex === i ? 'border-t-2 border-blue-400' : ''} {dragIndex === i || touchDragIndex === i ? 'opacity-50' : ''}"
+					class="select-none transition-transform {dragOverIndex === i ? 'border-t-2 border-blue-400' : ''} {dragIndex === i || touchDragIndex === i ? 'opacity-50' : ''}"
 				>
 					<CategoryCard category={cat.category} count={cat.count} />
 				</div>
