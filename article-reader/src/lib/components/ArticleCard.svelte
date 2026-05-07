@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { marked } from 'marked';
 	import type { ArticleSummary } from '$lib/types';
+
+	const renderer = new marked.Renderer();
+	renderer.link = ({ href, text }) => {
+		return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">${text}</a>`;
+	};
 
 	interface Props {
 		article: ArticleSummary;
@@ -18,9 +24,22 @@
 		});
 	}
 
+	function getSource(url: string | null): string {
+		if (!url) return '';
+		try {
+			return new URL(url).hostname.replace(/^www\./, '');
+		} catch {
+			return '';
+		}
+	}
+
 	function navigate() {
 		goto(`/article/${article.id}`);
 	}
+
+	let summaryHtml = $derived(
+		article.summary ? (marked(article.summary, { renderer }) as string) : ''
+	);
 </script>
 
 <button
@@ -33,16 +52,28 @@
 		<span class="inline-block h-2 w-2 rounded-full bg-blue-500" aria-label="Unread"></span>
 	{/if}
 
-	<p class="text-sm leading-relaxed text-gray-800 {isRead ? '' : 'font-semibold'}">
-		{article.summary ?? article.title ?? '(No summary)'}
-	</p>
+	{#if summaryHtml}
+		<div
+			class="prose prose-sm max-w-none text-gray-800 {isRead ? '' : 'font-semibold'}"
+			onclick={(e) => { if ((e.target as HTMLElement).tagName === 'A') e.stopPropagation(); }}
+		>
+			{@html summaryHtml}
+		</div>
+	{:else}
+		<p class="text-sm leading-relaxed text-gray-800 {isRead ? '' : 'font-semibold'}">
+			{article.title ?? '(No summary)'}
+		</p>
+	{/if}
 
-	<div class="flex items-center gap-3 text-xs text-gray-500">
+	<div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
 		{#if article.published_at}
 			<span>{formatDate(article.published_at)}</span>
 		{/if}
 		<span class="rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-700">
 			{article.importance_score}/10
 		</span>
+		{#if getSource(article.url)}
+			<span class="text-gray-400">{getSource(article.url)}</span>
+		{/if}
 	</div>
 </button>

@@ -21,6 +21,15 @@
 			day: 'numeric'
 		});
 	}
+
+	function getSource(url: string | null): string {
+		if (!url) return '';
+		try {
+			return new URL(url).hostname.replace(/^www\./, '');
+		} catch {
+			return '';
+		}
+	}
 </script>
 
 <main class="container mx-auto max-w-2xl px-4 py-8">
@@ -47,6 +56,9 @@
 					<span class="rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-700">
 						{article.importance_score}/10
 					</span>
+					{#if getSource(article.url)}
+						<span class="text-gray-400">{getSource(article.url)}</span>
+					{/if}
 				</div>
 			</div>
 
