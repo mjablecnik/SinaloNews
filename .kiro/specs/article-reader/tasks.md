@@ -35,7 +35,7 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Test: response includes `extracted_text` field
     - _Requirements: 6a.1, 6a.2, 6a.3, 6a.4_
 
-- [ ] 2. Checkpoint - Verify backend changes
+- [x] 2. Checkpoint - Verify backend changes
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 3. SvelteKit project scaffolding
