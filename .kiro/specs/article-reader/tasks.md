@@ -38,8 +38,8 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
 - [x] 2. Checkpoint - Verify backend changes
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 3. SvelteKit project scaffolding
-  - [ ] 3.1 Initialize SvelteKit project with TypeScript and adapter-static
+- [x] 3. SvelteKit project scaffolding
+  - [x] 3.1 Initialize SvelteKit project with TypeScript and adapter-static
     - Create `article-reader/` directory
     - Initialize SvelteKit project with TypeScript
     - Install dependencies: `@sveltejs/adapter-static`, `tailwindcss`, `marked` (markdown rendering), `vitest`, `fast-check`, `@testing-library/svelte`
@@ -47,13 +47,13 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Configure `vite.config.ts` with Vitest
     - _Requirements: 7.2, 8.1_
 
-  - [ ] 3.2 Configure Tailwind CSS
+  - [x] 3.2 Configure Tailwind CSS
     - Install and configure Tailwind CSS with PostCSS
     - Create `app.css` with Tailwind directives
     - Import in root `+layout.svelte`
     - _Requirements: 8.1, 8.3_
 
-  - [ ] 3.3 Set up environment variables
+  - [x] 3.3 Set up environment variables
     - Create `.env` with `PUBLIC_ARTICLE_API_URL=http://localhost:8002`
     - Create `.env.example` documenting the variable
     - Create `.gitignore` excluding `.env`, `node_modules/`, `build/`, `.svelte-kit/`
