@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import structlog
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -98,6 +99,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Article Classifier", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://sinalo-reader.fly.dev", "http://localhost:3000"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 @app.exception_handler(Exception)

@@ -11,6 +11,7 @@ from src.classifier_service import ClassifierService, is_processing, trigger_cla
 from src.database import get_session
 from src.models import Article, ArticleTag, ClassificationResult, Tag
 from src.schemas import (
+    ArticleDetailResponse,
     ClassifiedArticleResponse,
     ClassifyStatusResponse,
     ClassifyTriggerResponse,
@@ -139,6 +140,42 @@ async def get_articles(
     pages = math.ceil(total / size) if total > 0 else 0
 
     return PaginatedResponse(items=items, total=total, page=page, size=size, pages=pages)
+
+
+@router.get("/api/articles/{article_id}", response_model=ArticleDetailResponse)
+async def get_article_detail(
+    article_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> ArticleDetailResponse:
+    stmt = (
+        select(ClassificationResult)
+        .join(Article, ClassificationResult.article_id == Article.id)
+        .where(Article.id == article_id)
+        .options(
+            selectinload(ClassificationResult.article),
+            selectinload(ClassificationResult.article_tags)
+            .selectinload(ArticleTag.tag)
+            .selectinload(Tag.parent),
+        )
+    )
+    result = (await session.execute(stmt)).scalar_one_or_none()
+    if result is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    article = result.article
+    return ArticleDetailResponse(
+        id=article.id,
+        title=article.title,
+        url=article.url,
+        author=article.author,
+        published_at=article.published_at,
+        tags=_build_tag_responses(result.article_tags),
+        content_type=result.content_type,
+        importance_score=result.importance_score,
+        summary=result.summary,
+        extracted_text=article.extracted_text,
+        classified_at=result.classified_at,
+    )
 
 
 @router.post("/api/classify", response_model=ClassifyTriggerResponse, status_code=202)

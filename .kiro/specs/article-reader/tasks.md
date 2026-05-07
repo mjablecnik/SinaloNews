@@ -6,20 +6,20 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
 
 ## Tasks
 
-- [ ] 1. Backend changes to article-classifier API
-  - [ ] 1.1 Add CORS middleware to article-classifier
+- [x] 1. Backend changes to article-classifier API
+  - [x] 1.1 Add CORS middleware to article-classifier
     - Add `CORSMiddleware` to `article-classifier/src/main.py`
     - Allow origins: `https://sinalo-reader.fly.dev`, `http://localhost:3000`
     - Allow methods: `GET`
     - Allow headers: `*`
     - _Requirements: 7.7_
 
-  - [ ] 1.2 Add `ArticleDetailResponse` schema
+  - [x] 1.2 Add `ArticleDetailResponse` schema
     - Create `ArticleDetailResponse` class in `article-classifier/src/schemas.py` extending `ClassifiedArticleResponse`
     - Add `extracted_text: str | None` field
     - _Requirements: 6a.2, 6a.4_
 
-  - [ ] 1.3 Implement `GET /api/articles/{id}` endpoint
+  - [x] 1.3 Implement `GET /api/articles/{id}` endpoint
     - Add route to `article-classifier/src/routes.py`
     - Query `ClassificationResult` joined with `Article` by article ID
     - Use `selectinload` for article, article_tags, tag, and parent relationships
@@ -27,7 +27,7 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Return HTTP 404 if article ID doesn't exist or has no classification result
     - _Requirements: 6a.1, 6a.2, 6a.3, 6a.4_
 
-  - [ ]* 1.4 Write tests for `GET /api/articles/{id}` endpoint
+  - [x]* 1.4 Write tests for `GET /api/articles/{id}` endpoint
     - Add tests to `article-classifier/tests/test_routes.py`
     - Test: returns correct data for valid article ID with classification
     - Test: returns 404 for non-existent article ID

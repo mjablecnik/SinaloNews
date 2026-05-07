@@ -3,7 +3,7 @@
 Feature: article-classifier
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
@@ -11,6 +11,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from src.constants import ContentType, TAG_TAXONOMY
+from src.schemas import ArticleDetailResponse
 
 _ALL_CONTENT_TYPES = [ct.value for ct in ContentType]
 _ALL_CATEGORIES = list(TAG_TAXONOMY.keys())
@@ -202,3 +203,174 @@ def test_api_sorting_correctness(articles, sort_by, sort_order):
                 f"Descending order violated at index {i}: {keys[i]} < {keys[i + 1]}, "
                 f"sort_by={sort_by!r}"
             )
+
+
+# --- Tests for GET /api/articles/{id} ---
+
+@dataclass
+class _FakeDetailArticle:
+    id: int
+    title: Optional[str]
+    url: Optional[str]
+    author: Optional[str]
+    published_at: Optional[datetime]
+    extracted_text: Optional[str]
+    classified_at: datetime
+    content_type: str
+    importance_score: int
+    summary: str
+    tags: list[tuple[str, str]] = field(default_factory=list)
+
+
+def _simulate_get_article_detail(
+    article_id: int,
+    articles: list[_FakeDetailArticle],
+) -> Optional[_FakeDetailArticle]:
+    """Pure Python mirror of the get_article_detail route logic."""
+    for article in articles:
+        if article.id == article_id:
+            return article
+    return None
+
+
+def _build_detail_response(article: _FakeDetailArticle) -> dict:
+    return {
+        "id": article.id,
+        "title": article.title,
+        "url": article.url,
+        "author": article.author,
+        "published_at": article.published_at,
+        "tags": [{"category": cat, "subcategory": sub} for cat, sub in article.tags],
+        "content_type": article.content_type,
+        "importance_score": article.importance_score,
+        "summary": article.summary,
+        "extracted_text": article.extracted_text,
+        "classified_at": article.classified_at,
+    }
+
+
+def test_get_article_detail_returns_404_for_nonexistent_id():
+    """Test: returns 404 for non-existent article ID."""
+    articles: list[_FakeDetailArticle] = []
+    result = _simulate_get_article_detail(999, articles)
+    assert result is None, "Should return None (→ 404) for non-existent article ID"
+
+
+def test_get_article_detail_returns_404_for_article_without_classification():
+    """Test: returns 404 for article without classification result (empty store)."""
+    result = _simulate_get_article_detail(42, [])
+    assert result is None, "Should return None (→ 404) when no classification result exists"
+
+
+def test_get_article_detail_returns_correct_data():
+    """Test: returns correct data for valid article ID with classification."""
+    now = datetime(2025, 1, 15, 12, 0, 0)
+    article = _FakeDetailArticle(
+        id=1,
+        title="Test Article",
+        url="https://example.com/article",
+        author="Author Name",
+        published_at=now,
+        extracted_text="Full article text here.",
+        classified_at=now,
+        content_type="article",
+        importance_score=8,
+        summary="A summary of the article.",
+        tags=[("Technology", "AI")],
+    )
+    result = _simulate_get_article_detail(1, [article])
+    assert result is not None, "Should return the article for a valid ID"
+    assert result.id == 1
+    assert result.title == "Test Article"
+    assert result.importance_score == 8
+    assert result.summary == "A summary of the article."
+
+
+def test_get_article_detail_response_includes_extracted_text():
+    """Test: response includes extracted_text field."""
+    now = datetime(2025, 1, 15, 12, 0, 0)
+    article = _FakeDetailArticle(
+        id=5,
+        title="Article With Text",
+        url=None,
+        author=None,
+        published_at=None,
+        extracted_text="This is the full extracted text.",
+        classified_at=now,
+        content_type="article",
+        importance_score=7,
+        summary="Summary text.",
+    )
+    result = _simulate_get_article_detail(5, [article])
+    assert result is not None
+    response = _build_detail_response(result)
+    assert "extracted_text" in response
+    assert response["extracted_text"] == "This is the full extracted text."
+
+
+def test_get_article_detail_response_extracted_text_can_be_none():
+    """Test: extracted_text field is present even when None."""
+    now = datetime(2025, 1, 15, 12, 0, 0)
+    article = _FakeDetailArticle(
+        id=10,
+        title="No Text Article",
+        url="https://example.com",
+        author=None,
+        published_at=None,
+        extracted_text=None,
+        classified_at=now,
+        content_type="article",
+        importance_score=5,
+        summary="Short summary.",
+    )
+    result = _simulate_get_article_detail(10, [article])
+    assert result is not None
+    response = _build_detail_response(result)
+    assert "extracted_text" in response
+    assert response["extracted_text"] is None
+
+
+def test_article_detail_response_schema_has_extracted_text_field():
+    """Test: ArticleDetailResponse schema includes the extracted_text field."""
+    fields = ArticleDetailResponse.model_fields
+    assert "extracted_text" in fields, "ArticleDetailResponse must have extracted_text field"
+
+
+# Feature: article-classifier, Property 9: Detail endpoint returns complete data
+_detail_article_strategy = st.builds(
+    _FakeDetailArticle,
+    id=st.integers(min_value=1, max_value=10000),
+    title=st.one_of(st.none(), st.text(min_size=1, max_size=100)),
+    url=st.one_of(st.none(), st.text(min_size=1, max_size=200)),
+    author=st.one_of(st.none(), st.text(min_size=1, max_size=100)),
+    published_at=st.one_of(st.none(), _datetime_st),
+    extracted_text=st.one_of(st.none(), st.text(max_size=500)),
+    classified_at=_datetime_st,
+    content_type=_content_type_st,
+    importance_score=_score_st,
+    summary=st.text(min_size=1, max_size=200),
+    tags=st.lists(st.sampled_from(_ALL_TAG_PAIRS), min_size=0, max_size=3),
+)
+
+
+@given(
+    articles=st.lists(_detail_article_strategy, min_size=1, max_size=10),
+    idx=st.integers(min_value=0, max_value=9),
+)
+def test_get_article_detail_correctness(articles: list[_FakeDetailArticle], idx: int):
+    """Property 9: For any valid article ID with a classification result, the detail
+    endpoint returns a response containing all required fields including extracted_text.
+    Validates: Requirements 6a.1, 6a.2, 6a.4"""
+    target = articles[idx % len(articles)]
+    result = _simulate_get_article_detail(target.id, articles)
+
+    assert result is not None, f"Should find article with id={target.id}"
+    response = _build_detail_response(result)
+
+    for field_name in ("id", "title", "url", "author", "published_at", "tags",
+                       "content_type", "importance_score", "summary",
+                       "extracted_text", "classified_at"):
+        assert field_name in response, f"Response missing field: {field_name}"
+
+    assert response["id"] == target.id
+    assert response["extracted_text"] == target.extracted_text

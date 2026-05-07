@@ -40,6 +40,10 @@ class ClassifiedArticleResponse(BaseModel):
     classified_at: datetime
 
 
+class ArticleDetailResponse(ClassifiedArticleResponse):
+    extracted_text: str | None
+
+
 class PaginatedResponse(BaseModel):
     items: list[ClassifiedArticleResponse]
     total: int
