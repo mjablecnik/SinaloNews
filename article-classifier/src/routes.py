@@ -1,5 +1,8 @@
 import asyncio
+import hashlib
+import json
 import math
+import time
 from datetime import datetime
 
 import structlog
@@ -28,6 +31,33 @@ router = APIRouter()
 
 _classifier_service: ClassifierService | None = None
 _formatting_llm: ChatOpenAI | None = None
+
+# --- In-memory cache (1 hour TTL) ---
+_CACHE_TTL_SECONDS = 3600  # 1 hour
+_cache: dict[str, tuple[float, object]] = {}
+
+
+def _cache_key(prefix: str, params: dict) -> str:
+    """Generate a cache key from prefix and query params."""
+    raw = prefix + json.dumps(params, sort_keys=True, default=str)
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+def _cache_get(key: str) -> object | None:
+    """Get value from cache if not expired."""
+    entry = _cache.get(key)
+    if entry is None:
+        return None
+    timestamp, value = entry
+    if time.time() - timestamp > _CACHE_TTL_SECONDS:
+        del _cache[key]
+        return None
+    return value
+
+
+def _cache_set(key: str, value: object) -> None:
+    """Store value in cache with current timestamp."""
+    _cache[key] = (time.time(), value)
 
 
 def _get_formatting_llm() -> ChatOpenAI:
@@ -120,6 +150,17 @@ async def get_articles(
     size: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ) -> PaginatedResponse:
+    # Check cache
+    cache_params = {
+        "category": category, "subcategory": subcategory, "content_type": content_type,
+        "min_score": min_score, "date_from": date_from, "date_to": date_to,
+        "sort_by": sort_by, "sort_order": sort_order, "page": page, "size": size,
+    }
+    key = _cache_key("articles", cache_params)
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached  # type: ignore[return-value]
+
     stmt = (
         select(ClassificationResult)
         .join(Article, ClassificationResult.article_id == Article.id)
@@ -200,7 +241,9 @@ async def get_articles(
 
     pages = math.ceil(total / size) if total > 0 else 0
 
-    return PaginatedResponse(items=items, total=total, page=page, size=size, pages=pages)
+    result = PaginatedResponse(items=items, total=total, page=page, size=size, pages=pages)
+    _cache_set(key, result)
+    return result
 
 
 @router.get("/api/articles/{article_id}", response_model=ArticleDetailResponse)
