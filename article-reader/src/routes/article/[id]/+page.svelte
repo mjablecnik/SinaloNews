@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { onMount } from 'svelte';
 	import { readState } from '$lib/stores/readState';
+	import { formatExtractedText, sanitizeSummary } from '$lib/utils';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 
@@ -30,6 +31,10 @@
 			return '';
 		}
 	}
+
+	let formattedText = $derived(
+		data.article?.extracted_text ? formatExtractedText(data.article.extracted_text) : ''
+	);
 </script>
 
 <main class="container mx-auto max-w-2xl px-4 py-8">
@@ -79,7 +84,7 @@
 				<section class="mb-6">
 					<h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Summary</h2>
 					<div class="rounded-lg bg-gray-50 p-4">
-						<MarkdownRenderer content={article.summary} />
+						<MarkdownRenderer content={sanitizeSummary(article.summary, 10000)} />
 					</div>
 				</section>
 			{/if}
@@ -90,7 +95,7 @@
 						Full Article
 					</h2>
 					<div class="prose max-w-none">
-						<MarkdownRenderer content={article.extracted_text} />
+						<MarkdownRenderer content={formattedText} />
 					</div>
 				</section>
 			{/if}

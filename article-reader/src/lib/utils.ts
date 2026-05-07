@@ -27,3 +27,43 @@ export function extractSubcategories(articles: ArticleSummary[], category: strin
 	}
 	return Array.from(seen);
 }
+
+/**
+ * Sanitize summary text by removing image URLs, base64 data, and other garbage.
+ * Then truncate to maxLength characters.
+ */
+export function sanitizeSummary(text: string, maxLength = 800): string {
+	let clean = text;
+	// Remove image URLs (e.g., .gstatic.com/images?q=...)
+	clean = clean.replace(/https?:\/\/\S+\.(jpg|jpeg|png|gif|webp|svg|bmp)\S*/gi, '');
+	// Remove data URIs and base64 blobs
+	clean = clean.replace(/data:[^\s]+/g, '');
+	// Remove standalone URLs that look like image queries or long encoded strings (>100 chars)
+	clean = clean.replace(/https?:\/\/\S{100,}/g, '');
+	// Remove lines that are mostly non-word characters (encoded garbage)
+	clean = clean
+		.split('\n')
+		.filter((line) => {
+			const wordChars = line.replace(/[^a-zA-ZÀ-žА-я0-9\s]/g, '').length;
+			return line.trim().length === 0 || wordChars > line.trim().length * 0.3;
+		})
+		.join('\n');
+	// Collapse multiple newlines
+	clean = clean.replace(/\n{3,}/g, '\n\n').trim();
+	// Truncate
+	if (clean.length > maxLength) {
+		clean = clean.slice(0, maxLength).replace(/\s+\S*$/, '') + '…';
+	}
+	return clean;
+}
+
+/**
+ * Format extracted_text into readable markdown paragraphs.
+ * Splits on double newlines, and converts single newlines within paragraphs to spaces.
+ */
+export function formatExtractedText(text: string): string {
+	// Split into paragraphs by double newline
+	const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
+	// Within each paragraph, collapse single newlines to spaces
+	return paragraphs.map((p) => p.replace(/\n/g, ' ').trim()).join('\n\n');
+}

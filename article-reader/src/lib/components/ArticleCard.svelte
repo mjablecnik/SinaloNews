@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { marked } from 'marked';
 	import type { ArticleSummary } from '$lib/types';
+	import { sanitizeSummary } from '$lib/utils';
 
 	const renderer = new marked.Renderer();
 	renderer.link = ({ href, text }) => {
@@ -38,7 +39,7 @@
 	}
 
 	let summaryHtml = $derived(
-		article.summary ? (marked(article.summary, { renderer }) as string) : ''
+		article.summary ? (marked(sanitizeSummary(article.summary), { renderer }) as string) : ''
 	);
 </script>
 
