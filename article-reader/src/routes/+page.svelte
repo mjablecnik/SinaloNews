@@ -146,7 +146,7 @@
 					ontouchstart={(e) => handleTouchStart(e, i)}
 					ontouchmove={(e) => handleTouchMove(e)}
 					ontouchend={handleTouchEnd}
-					class="transition-transform {dragOverIndex === i ? 'border-t-2 border-blue-400' : ''} {dragIndex === i || touchDragIndex === i ? 'opacity-50' : ''}"
+					class="select-none touch-none transition-transform {dragOverIndex === i ? 'border-t-2 border-blue-400' : ''} {dragIndex === i || touchDragIndex === i ? 'opacity-50' : ''}"
 				>
 					<CategoryCard category={cat.category} count={cat.count} />
 				</div>
