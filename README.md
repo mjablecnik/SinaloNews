@@ -1,54 +1,128 @@
 # Sinalo — AI News Aggregation & Analysis
 
-A two-service system that automatically discovers and extracts news articles from RSS feeds, then provides intelligent question-answering over the collected content using RAG (Retrieval-Augmented Generation).
+A multi-service system that automatically discovers, extracts, classifies, and serves news articles from RSS feeds. Includes an AI-powered question-answering agent using RAG (Retrieval-Augmented Generation) and a web frontend for browsing classified content.
 
 ## Architecture
 
 ```
-rss-feed-pipeline (port 8000)          ai-news-agent (port 8001)
-┌──────────────────────────┐           ┌──────────────────────────┐
-│  Discover RSS feeds      │           │  Index articles into     │
-│  Parse feed entries      │           │  Qdrant vector store     │
-│  Extract article text    │──────────▶│  Answer questions via    │
-│  Store in PostgreSQL     │  shared   │  LangGraph RAG agent     │
-└──────────────────────────┘  Postgres └──────────────────────────┘
+rss-feed (port 8000)         article-classifier (port 8002)       article-reader (port 3000)
+┌─────────────────────┐      ┌──────────────────────────────┐     ┌─────────────────────────┐
+│ Discover RSS feeds  │      │ Classify articles via LLM    │     │ SvelteKit frontend      │
+│ Parse feed entries  │─────▶│ Generate tags & summaries    │◀────│ Browse by category      │
+│ Extract article text│      │ Assign importance scores     │     │ Read article details    │
+│ Store in PostgreSQL │      └──────────────────────────────┘     └─────────────────────────┘
+└─────────────────────┘                │
+         │                             │
+         │         shared PostgreSQL   │
+         │                             │
+         ▼                             ▼
+┌──────────────────────────────────────────────┐
+│                  PostgreSQL                   │
+└──────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│ rag-agent (port 8001)       │
+│ Index articles into Qdrant  │
+│ Answer questions via RAG    │
+│ LangGraph + OpenRouter LLMs │
+└─────────────────────────────┘
 ```
 
 ## Services
 
-### rss-feed-pipeline
+| Service | Tech Stack | Port | Fly.io App | Description |
+|---------|-----------|------|------------|-------------|
+| [rss-feed](rss-feed/README.md) | Python, FastAPI | 8000 | `sinalo-feed` | RSS/Atom feed discovery, parsing, and article text extraction |
+| [article-classifier](article-classifier/README.md) | Python, FastAPI, LangGraph | 8002 | `sinalo-classifier` | LLM-based article classification, tagging, and summarization |
+| [rag-agent](rag-agent/README.md) | Python, FastAPI, LangGraph, Qdrant | 8001 | `sinalo-rag-agent` | RAG-based question answering over collected articles |
+| [article-reader](article-reader/README.md) | SvelteKit, TypeScript, Tailwind | 3000 | `sinalo-reader` | Web UI for browsing and reading classified articles |
 
-Discovers RSS/Atom feeds on registered websites, parses entries, downloads articles, and extracts clean text using Trafilatura. Exposes a REST API and includes a CLI client (`feed-parser.sh`).
+## Data Flow
 
-Key flow: **Register website → Discover feeds → Parse entries → Extract article text**
-
-### ai-news-agent
-
-Reads extracted articles from PostgreSQL, chunks and embeds them into Qdrant, and answers user questions using a LangGraph agent with OpenRouter LLMs. Responses include source citations with links and publication dates.
-
-Key flow: **Index articles → User asks question → Semantic search → LLM generates cited answer**
+1. **rss-feed** discovers feeds on registered websites, parses entries, and extracts article text into PostgreSQL
+2. **article-classifier** reads unprocessed articles, classifies them with LLM (tags, importance, summary), writes results back
+3. **article-reader** fetches classified articles from the classifier API and displays them in a web UI
+4. **rag-agent** indexes articles into Qdrant and answers natural language questions with source citations
 
 ## Tech Stack
 
-- Python 3.11+, FastAPI, SQLAlchemy (async), PostgreSQL, structlog
-- feedparser, Trafilatura, httpx (rss-feed)
-- Qdrant, LangChain, LangGraph, OpenRouter (rag-agent)
+- **Backend**: Python 3.12, FastAPI, SQLAlchemy (async), PostgreSQL, structlog
+- **Frontend**: SvelteKit 5, TypeScript, Tailwind CSS, Vite
+- **AI/ML**: LangChain, LangGraph, OpenRouter LLMs, Qdrant vector store
+- **Infrastructure**: Docker multi-stage builds, Fly.io, nginx (frontend)
 
 ## Quick Start
 
-Each service has its own `docker-compose.yml` for local development:
+Each service has its own local development setup. All require a shared PostgreSQL database.
 
 ```bash
-# 1. RSS Feed Pipeline
+# 1. RSS Feed Pipeline (+ local PostgreSQL via docker-compose)
 cp rss-feed/.env.example rss-feed/.env
-docker compose -f rss-feed/docker-compose.yml up --build
+docker compose -f rss-feed/docker-compose.yml up -d
+docker compose -f rss-feed/docker-compose.yml exec app alembic upgrade head
 
-# 2. AI News Agent
+# 2. Article Classifier
+cp article-classifier/.env.example article-classifier/.env
+# Set DATABASE_URL and OPENROUTER_API_KEY in article-classifier/.env
+sh article-classifier/scripts/start-docker.sh
+
+# 3. RAG Agent (+ local Qdrant via docker-compose)
 cp rag-agent/.env.example rag-agent/.env
-# Set OPENROUTER_API_KEY in rag-agent/.env
-docker compose -f rag-agent/docker-compose.yml up --build
+# Set DATABASE_URL and OPENROUTER_API_KEY in rag-agent/.env
+docker compose -f rag-agent/docker-compose.yml up -d
+
+# 4. Article Reader
+cp article-reader/.env.example article-reader/.env
+sh article-reader/scripts/start-docker.sh
 ```
 
-See individual service READMEs for detailed setup, CLI usage, and Fly.io deployment instructions:
-- [rss-feed/README.md](rss-feed/README.md)
-- [rag-agent/README.md](rag-agent/README.md)
+See individual service READMEs for detailed setup, CLI usage, and configuration.
+
+## Fly.io Deployment
+
+All services deploy to Fly.io in the Frankfurt (fra) region. A root-level `deploy.sh` script orchestrates setup and deployment across all services.
+
+### First-time setup
+
+Create all Fly.io apps and set secrets from each service's `.env`:
+
+```bash
+./deploy.sh setup
+```
+
+### Deploy
+
+```bash
+# Deploy all services (runs migrations automatically for rss-feed and classifier)
+./deploy.sh all
+
+# Deploy individual services
+./deploy.sh rss          # rss-feed + migrations
+./deploy.sh classifier   # article-classifier + migrations
+./deploy.sh agent        # rag-agent
+./deploy.sh reader       # article-reader
+```
+
+### deploy.sh reference
+
+| Command | Description |
+|---------|-------------|
+| `./deploy.sh` | Deploy all services (default) |
+| `./deploy.sh rss` | Deploy rss-feed only (+ runs Alembic migrations) |
+| `./deploy.sh agent` | Deploy rag-agent only |
+| `./deploy.sh classifier` | Deploy article-classifier only (+ runs Alembic migrations) |
+| `./deploy.sh reader` | Deploy article-reader only |
+| `./deploy.sh setup` | Create Fly apps and set secrets for all services (run once) |
+
+The script automatically runs database migrations after deploying `rss-feed` and `article-classifier`.
+
+## Environment Variables
+
+Each service uses `.env` files for configuration. Copy `.env.example` to `.env` in each service directory and fill in the required values.
+
+Shared required variables:
+- `DATABASE_URL` — PostgreSQL connection string (all Python services)
+- `OPENROUTER_API_KEY` — OpenRouter API key (classifier, rag-agent)
+
+See each service's `.env.example` for the full list of variables.
