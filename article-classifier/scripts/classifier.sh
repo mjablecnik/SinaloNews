@@ -171,8 +171,8 @@ cmd_classify() {
     api_request POST "/api/classify"
     if [ "$JSON_OUTPUT" = "1" ]; then out_json; else
         queued=$(printf '%s' "$body" | jq -r '.queued // 0')
-        status=$(printf '%s' "$body" | jq -r '.status // "queued"')
-        printf 'Classification triggered: %s articles queued (%s)\n' "$queued" "$status"
+        msg=$(printf '%s' "$body" | jq -r '.message // "Classification triggered"')
+        printf '%s\n' "$msg"
     fi
 }
 
@@ -186,7 +186,7 @@ cmd_status() {
     done
     api_request GET "/api/classify/status"
     if [ "$JSON_OUTPUT" = "1" ]; then out_json; else
-        out_fmt '"Status:      \(.status)\nPending:     \(.pending_count)\nClassified:  \(.classified_count)"'
+        out_fmt '"Status:      \(.status)\nPending:     \(.pending)\nClassified:  \(.classified)"'
     fi
 }
 
