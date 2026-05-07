@@ -51,7 +51,7 @@
 		{:else}
 			<div class="flex flex-col gap-3">
 				{#each filteredArticles as article}
-					<ArticleCard {article} isRead={$readState.includes(article.id)} />
+					<ArticleCard {article} isRead={$readState.includes(article.id)} onMarkRead={(id) => readState.markAsRead(id)} />
 				{/each}
 			</div>
 		{/if}

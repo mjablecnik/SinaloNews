@@ -12,9 +12,10 @@
 	interface Props {
 		article: ArticleSummary;
 		isRead: boolean;
+		onMarkRead?: (id: number) => void;
 	}
 
-	let { article, isRead }: Props = $props();
+	let { article, isRead, onMarkRead }: Props = $props();
 
 	function formatDate(dateStr: string | null): string {
 		if (!dateStr) return '';
@@ -75,6 +76,15 @@
 		</span>
 		{#if getSource(article.url)}
 			<span class="text-gray-400">{getSource(article.url)}</span>
+		{/if}
+		{#if !isRead && onMarkRead}
+			<button
+				onclick={(e) => { e.stopPropagation(); onMarkRead(article.id); }}
+				class="ml-auto rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+				title="Mark as read"
+			>
+				✓ Read
+			</button>
 		{/if}
 	</div>
 </button>

@@ -12,7 +12,7 @@ function sortArticles(articles: ArticleSummary[]): ArticleSummary[] {
 		if (dateA !== dateB) {
 			const timeA = a.published_at ? new Date(a.published_at).getTime() : 0;
 			const timeB = b.published_at ? new Date(b.published_at).getTime() : 0;
-			return timeA - timeB;
+			return timeB - timeA; // newest first
 		}
 		return b.importance_score - a.importance_score;
 	});
@@ -28,7 +28,7 @@ export const load: PageLoad = async ({ params, depends }) => {
 			min_score: s.minScore,
 			date_from: buildDateFrom(s.daysBack),
 			sort_by: 'published_at',
-			sort_order: 'asc'
+			sort_order: 'desc'
 		});
 		return { articles: sortArticles(articles), category, error: null };
 	} catch (e) {
