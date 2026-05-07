@@ -43,8 +43,6 @@ class ArticleExtractorService:
             await db.commit()
             return article
 
-        article.original_html = html
-
         loop = asyncio.get_event_loop()
         extracted_text = await loop.run_in_executor(None, trafilatura.extract, html)
 
