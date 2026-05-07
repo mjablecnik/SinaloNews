@@ -138,14 +138,14 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Supports bold, italic, bullet points
     - _Requirements: 8.2_
 
-- [ ] 6. Page screens and navigation
-  - [ ] 6.1 Implement root layout
+- [x] 6. Page screens and navigation
+  - [x] 6.1 Implement root layout
     - Create `src/routes/+layout.svelte`
     - Import global Tailwind styles
     - Minimal layout wrapper with responsive container
     - _Requirements: 8.1, 8.3_
 
-  - [ ] 6.2 Implement Category Selection Screen
+  - [x] 6.2 Implement Category Selection Screen
     - Create `src/routes/+page.svelte` and `src/routes/+page.ts`
     - Load function: fetch all articles using current settings (min_score, date_from), extract categories with counts
     - Display categories as `CategoryCard` grid
@@ -154,7 +154,7 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Navigate to `/category/[slug]` on category click
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
 
-  - [ ] 6.3 Implement Article List Screen
+  - [x] 6.3 Implement Article List Screen
     - Create `src/routes/category/[slug]/+page.svelte` and `+page.ts`
     - Load function: fetch articles filtered by category, min_score, date_from, sorted by published_at asc
     - Display articles as `ArticleCard` list with read/unread indicators
@@ -167,7 +167,7 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Navigate to `/article/[id]` on card tap
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10, 2.11, 6.7_
 
-  - [ ] 6.4 Implement Article Detail Screen
+  - [x] 6.4 Implement Article Detail Screen
     - Create `src/routes/article/[id]/+page.svelte` and `+page.ts`
     - Load function: fetch article detail from `GET /api/articles/{id}`
     - Display summary section using `MarkdownRenderer`
@@ -180,7 +180,7 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Back navigation to article list
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8_
 
-  - [ ] 6.5 Implement Settings Page
+  - [x] 6.5 Implement Settings Page
     - Create `src/routes/settings/+page.svelte`
     - Load current settings from settings store
     - Min importance score slider/input (0-10, default 6)
