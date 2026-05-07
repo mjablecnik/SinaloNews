@@ -59,12 +59,12 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Create `.gitignore` excluding `.env`, `node_modules/`, `build/`, `.svelte-kit/`
     - _Requirements: 6.1, 7.2, 7.3_
 
-- [ ] 4. Core library code (types, API client, stores, utilities)
-  - [ ] 4.1 Define TypeScript interfaces and types
+- [x] 4. Core library code (types, API client, stores, utilities)
+  - [x] 4.1 Define TypeScript interfaces and types
     - Create `src/lib/types.ts` with: `Tag`, `ArticleSummary`, `ArticleDetail`, `PaginatedResponse`, `CategoryCount`, `Settings`, `ReadState`
     - _Requirements: 6.2, 6a.4_
 
-  - [ ] 4.2 Implement API client
+  - [x] 4.2 Implement API client
     - Create `src/lib/api.ts`
     - Import `PUBLIC_ARTICLE_API_URL` from `$env/static/public`
     - Implement `getArticles(params: ArticleQueryParams): Promise<PaginatedResponse>`
@@ -73,7 +73,7 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Include proper error handling for network errors and HTTP error responses
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-  - [ ] 4.3 Implement settings store
+  - [x] 4.3 Implement settings store
     - Create `src/lib/stores/settings.ts`
     - Writable store backed by localStorage key `article-reader:settings`
     - Default values: `{ minScore: 6, daysBack: 7 }`
@@ -81,7 +81,7 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Load from localStorage on initialization, persist on change
     - _Requirements: 5.2, 5.3, 5.4, 5.7_
 
-  - [ ] 4.4 Implement read state store
+  - [x] 4.4 Implement read state store
     - Create `src/lib/stores/readState.ts`
     - Writable store backed by localStorage key `article-reader:read-articles`
     - Store as array of article IDs (`number[]`)
@@ -89,33 +89,33 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Articles not in store are treated as unread
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [ ] 4.5 Implement utility functions
+  - [x] 4.5 Implement utility functions
     - Create `src/lib/utils.ts`
     - `extractCategories(articles: ArticleSummary[]): CategoryCount[]` — groups articles by category, counts per category
     - `buildDateFrom(daysBack: number): string` — computes ISO date string for date_from parameter
     - `extractSubcategories(articles: ArticleSummary[], category: string): string[]` — gets unique subcategories for a category
     - _Requirements: 1.2, 1.3, 2.5_
 
-- [ ] 5. Shared UI components
-  - [ ] 5.1 Create `LoadingSpinner` component
+- [x] 5. Shared UI components
+  - [x] 5.1 Create `LoadingSpinner` component
     - Create `src/lib/components/LoadingSpinner.svelte`
     - Centered loading animation using Tailwind
     - _Requirements: 1.6, 2.10_
 
-  - [ ] 5.2 Create `ErrorMessage` component
+  - [x] 5.2 Create `ErrorMessage` component
     - Create `src/lib/components/ErrorMessage.svelte`
     - Props: `message: string`, optional `onRetry` callback
     - Display user-friendly error with "Try Again" button
     - _Requirements: 1.5, 2.9, 6.6_
 
-  - [ ] 5.3 Create `CategoryCard` component
+  - [x] 5.3 Create `CategoryCard` component
     - Create `src/lib/components/CategoryCard.svelte`
     - Props: `category: string`, `count: number`
     - Displays category name and article count
     - Clickable, navigates to category page
     - _Requirements: 1.2, 1.3, 1.4_
 
-  - [ ] 5.4 Create `ArticleCard` component
+  - [x] 5.4 Create `ArticleCard` component
     - Create `src/lib/components/ArticleCard.svelte`
     - Props: `article: ArticleSummary`, `isRead: boolean`
     - Display summary text as primary content
@@ -124,14 +124,14 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Clickable, navigates to article detail
     - _Requirements: 2.2, 2.3, 2.4, 8.4, 8.5_
 
-  - [ ] 5.5 Create `SubcategoryFilter` component
+  - [x] 5.5 Create `SubcategoryFilter` component
     - Create `src/lib/components/SubcategoryFilter.svelte`
     - Props: `subcategories: string[]`, `selected: string | null`
     - Chip-based filter UI
     - Dispatches selection event on click
     - _Requirements: 2.5, 2.6_
 
-  - [ ] 5.6 Create `MarkdownRenderer` component
+  - [x] 5.6 Create `MarkdownRenderer` component
     - Create `src/lib/components/MarkdownRenderer.svelte`
     - Props: `content: string`
     - Renders markdown to HTML using `marked` library
