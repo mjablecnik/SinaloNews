@@ -2,9 +2,9 @@ app = "sinalo-reader"
 primary_region = "fra"
 
 [build]
+  [build.args]
+    PUBLIC_ARTICLE_API_URL = "https://sinalo-classifier.fly.dev"
 
-[env]
-PUBLIC_ARTICLE_API_URL = "https://sinalo-classifier.fly.dev"
 
 [http_service]
 internal_port = 3000

@@ -7,6 +7,10 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+
+ARG PUBLIC_ARTICLE_API_URL=http://localhost:8002
+ENV PUBLIC_ARTICLE_API_URL=$PUBLIC_ARTICLE_API_URL
+
 RUN npm run build
 
 # Production stage
