@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { invalidate } from '$app/navigation';
 	import { navigating } from '$app/stores';
+	import { onMount } from 'svelte';
 	import type { CategoryCount } from '$lib/types';
 	import CategoryCard from '$lib/components/CategoryCard.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
@@ -10,6 +11,7 @@
 	const ORDER_KEY = 'article-reader:category-order';
 
 	let { data }: { data: PageData } = $props();
+	let listContainer: HTMLDivElement | undefined = $state();
 	let loading = $state(!data.categories.length && !data.error);
 
 	// Apply saved order to categories
@@ -86,10 +88,12 @@
 	let touchDragIndex = $state<number | null>(null);
 	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 	let isDragging = $state(false);
+	let pendingTouchIndex = $state<number | null>(null);
 
 	function handleTouchStart(e: TouchEvent, index: number) {
 		touchStartY = e.touches[0].clientY;
 		isDragging = false;
+		pendingTouchIndex = index;
 		// Start long-press timer (500ms)
 		longPressTimer = setTimeout(() => {
 			touchDragIndex = index;
@@ -106,10 +110,13 @@
 			if (dy > 10 && longPressTimer) {
 				clearTimeout(longPressTimer);
 				longPressTimer = null;
+				pendingTouchIndex = null;
 			}
 			return;
 		}
+		// In drag mode — prevent pull-to-refresh and scrolling
 		e.preventDefault();
+		e.stopPropagation();
 		const touch = e.touches[0];
 		const elements = document.querySelectorAll('[data-cat-index]');
 		for (const el of elements) {
@@ -139,11 +146,23 @@
 		touchDragIndex = null;
 		dragOverIndex = null;
 		isDragging = false;
+		pendingTouchIndex = null;
 	}
 
 	function reload() {
 		invalidate('app:home');
 	}
+
+	// Register non-passive touchmove to allow preventDefault during drag
+	onMount(() => {
+		const handler = (e: TouchEvent) => {
+			if (isDragging) {
+				e.preventDefault();
+			}
+		};
+		document.addEventListener('touchmove', handler, { passive: false });
+		return () => document.removeEventListener('touchmove', handler);
+	});
 </script>
 
 <main class="container mx-auto max-w-2xl px-4 py-8">
