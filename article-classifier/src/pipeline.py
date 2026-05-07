@@ -65,6 +65,9 @@ _INSTRUCTIONS = """Classification rules:
 - Write the summary in Czech language, approximately one paragraph in Markdown format
 - The summary MUST capture ALL key facts, conclusions, names, numbers, dates, and actionable information
 - Markdown formatting (bold, italic, bullet points) is allowed when it improves readability
+- The summary MUST NOT contain any image URLs, base64 data, emoji sequences, or encoded strings
+- The summary MUST NOT exceed 1000 characters
+- The summary MUST contain only readable text — no raw URLs unless they are meaningful hyperlinks
 - Write the reason field in English explaining why the given score and content type were assigned"""
 
 

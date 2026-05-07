@@ -42,6 +42,7 @@ class ClassifiedArticleResponse(BaseModel):
 
 class ArticleDetailResponse(ClassifiedArticleResponse):
     extracted_text: str | None
+    formatted_text: str | None
 
 
 class PaginatedResponse(BaseModel):

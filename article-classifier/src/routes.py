@@ -3,11 +3,13 @@ from datetime import datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
+from langchain_openai import ChatOpenAI
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.classifier_service import ClassifierService, is_processing, trigger_classification
+from src.config import settings
 from src.database import get_session
 from src.models import Article, ArticleTag, ClassificationResult, Tag
 from src.schemas import (
@@ -24,6 +26,50 @@ log = structlog.get_logger()
 router = APIRouter()
 
 _classifier_service: ClassifierService | None = None
+_formatting_llm: ChatOpenAI | None = None
+
+
+def _get_formatting_llm() -> ChatOpenAI:
+    global _formatting_llm
+    if _formatting_llm is None:
+        _formatting_llm = ChatOpenAI(
+            model=settings.LLM_MODEL,
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": "https://github.com/sinalo/article-classifier",
+                "X-Title": "Article Classifier",
+            },
+        )
+    return _formatting_llm
+
+
+_FORMAT_PROMPT = """You are a text formatter for a news reader application.
+Take the following raw article text and reformat it into clean, readable Markdown.
+
+Rules:
+- Split the text into logical paragraphs for easy reading
+- Use **bold** for important names, organizations, numbers, and key terms
+- Use bullet points where appropriate (e.g., lists of items)
+- Remove any image URLs, base64 data, encoded strings, or garbage characters
+- Remove any emoji sequences that don't add meaning
+- Keep the content in its original language (do not translate)
+- Do NOT add any information that is not in the original text
+- Do NOT add a title or heading — just the formatted body text
+- Output ONLY the formatted Markdown text, nothing else"""
+
+
+async def _format_article_text(raw_text: str) -> str:
+    """Format raw extracted article text into readable Markdown via LLM."""
+    llm = _get_formatting_llm()
+    # Truncate input to avoid token limits (keep first 8000 chars)
+    text_input = raw_text[:8000] if len(raw_text) > 8000 else raw_text
+    messages = [
+        {"role": "system", "content": _FORMAT_PROMPT},
+        {"role": "user", "content": text_input},
+    ]
+    response = await llm.ainvoke(messages)
+    return str(response.content).strip()
 
 
 def get_classifier_service() -> ClassifierService:
@@ -163,6 +209,20 @@ async def get_article_detail(
         raise HTTPException(status_code=404, detail="Article not found")
 
     article = result.article
+
+    # Lazy format: if extracted_text exists but formatted_text doesn't, generate it
+    formatted_text = article.formatted_text
+    if article.extracted_text and not formatted_text:
+        try:
+            formatted_text = await _format_article_text(article.extracted_text)
+            article.formatted_text = formatted_text
+            await session.commit()
+            log.info("article_formatted", article_id=article.id)
+        except Exception as exc:
+            log.error("article_formatting_failed", article_id=article.id, error=str(exc)[:200])
+            # Fall back to raw extracted_text
+            formatted_text = article.extracted_text
+
     return ArticleDetailResponse(
         id=article.id,
         title=article.title,
@@ -174,6 +234,7 @@ async def get_article_detail(
         importance_score=result.importance_score,
         summary=result.summary,
         extracted_text=article.extracted_text,
+        formatted_text=formatted_text,
         classified_at=result.classified_at,
     )
 

@@ -33,7 +33,11 @@
 	}
 
 	let formattedText = $derived(
-		data.article?.extracted_text ? formatExtractedText(data.article.extracted_text) : ''
+		data.article?.formatted_text
+			? data.article.formatted_text
+			: data.article?.extracted_text
+				? formatExtractedText(data.article.extracted_text)
+				: ''
 	);
 </script>
 
@@ -89,7 +93,7 @@
 				</section>
 			{/if}
 
-			{#if article.extracted_text}
+			{#if article.formatted_text || article.extracted_text}
 				<section>
 					<h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
 						Full Article
