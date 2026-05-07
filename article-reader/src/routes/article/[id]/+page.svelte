@@ -84,6 +84,14 @@
 				</div>
 			</div>
 
+			{#if article.image_url}
+				<img
+					src={article.image_url}
+					alt={article.title ?? 'Article image'}
+					class="mb-6 w-full rounded-lg object-cover max-h-64"
+				/>
+			{/if}
+
 			{#if article.url}
 				<a
 					href={article.url}

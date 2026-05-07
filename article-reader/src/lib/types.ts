@@ -19,6 +19,7 @@ export interface ArticleSummary {
 export interface ArticleDetail extends ArticleSummary {
 	extracted_text: string | null;
 	formatted_text: string | null;
+	image_url: string | null;
 }
 
 export interface PaginatedResponse {

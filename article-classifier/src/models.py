@@ -27,6 +27,7 @@ class Article(Base):
     published_at: Mapped[datetime | None] = mapped_column(DateTime)
     extracted_text: Mapped[str | None] = mapped_column(Text)
     formatted_text: Mapped[str | None] = mapped_column(Text)
+    image_url: Mapped[str | None] = mapped_column(String(2048))
     status: Mapped[str | None] = mapped_column(String(20))
 
     classification_result: Mapped["ClassificationResult | None"] = relationship(

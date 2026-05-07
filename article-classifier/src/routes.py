@@ -243,6 +243,7 @@ async def get_article_detail(
         summary=result.summary,
         extracted_text=article.extracted_text,
         formatted_text=formatted_text,
+        image_url=article.image_url,
         classified_at=result.classified_at,
     )
 
