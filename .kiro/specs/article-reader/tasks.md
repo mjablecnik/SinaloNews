@@ -192,8 +192,8 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
 - [x] 7. Checkpoint - Verify app functionality
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Deployment setup
-  - [ ] 8.1 Create Dockerfile for static SPA
+- [x] 8. Deployment setup
+  - [x] 8.1 Create Dockerfile for static SPA
     - Multi-stage build: Node.js build stage → Nginx production stage
     - Build stage: install deps, build SvelteKit static output
     - Production stage: copy built files to Nginx, serve on port 3000
@@ -201,27 +201,27 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Create `.dockerignore` excluding `node_modules/`, `.svelte-kit/`, `build/`, `.git/`
     - _Requirements: 7.1, 7.6_
 
-  - [ ] 8.2 Create `fly.toml` configuration
+  - [x] 8.2 Create `fly.toml` configuration
     - App name: `sinalo-reader`
     - Internal port: 3000
     - HTTP service with auto_stop/auto_start
     - `[env]` section with `PUBLIC_ARTICLE_API_URL` pointing to production article-classifier URL
     - _Requirements: 7.1, 7.2_
 
-  - [ ] 8.3 Create `scripts/start-docker.sh`
+  - [x] 8.3 Create `scripts/start-docker.sh`
     - Parse app name from `fly.toml`
     - Build Docker image
     - Stop/remove existing container
     - Run container with `--env-file .env` on port 3000
     - _Requirements: 7.4_
 
-  - [ ] 8.4 Create `scripts/fly-setup.sh`
+  - [x] 8.4 Create `scripts/fly-setup.sh`
     - Parse app name from `fly.toml`
     - Create Fly.io app if not exists
     - Set secrets from `.env` (skip keys in `fly.toml [env]`)
     - _Requirements: 7.5_
 
-  - [ ] 8.5 Update root `deploy.sh` script
+  - [x] 8.5 Update root `deploy.sh` script
     - Add `deploy_reader()` function to deploy article-reader to Fly.io
     - Add `setup_reader()` function to run `article-reader/scripts/fly-setup.sh`
     - Add `reader` case to the case statement for deploying only article-reader
