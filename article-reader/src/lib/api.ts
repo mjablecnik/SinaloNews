@@ -12,7 +12,7 @@ export interface ArticleQueryParams {
 	size?: number;
 }
 
-function buildUrl(path: string, params: Record<string, string | number | undefined>): string {
+export function buildUrl(path: string, params: Record<string, string | number | undefined>): string {
 	const url = new URL(`${PUBLIC_ARTICLE_API_URL}${path}`);
 	for (const [key, value] of Object.entries(params)) {
 		if (value !== undefined && value !== null) {

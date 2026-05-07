@@ -19,7 +19,7 @@ function loadReadIds(): number[] {
 	}
 }
 
-function createReadStateStore() {
+export function createReadStateStore() {
 	const { subscribe, update } = writable<number[]>(loadReadIds());
 
 	function persist(ids: number[]) {

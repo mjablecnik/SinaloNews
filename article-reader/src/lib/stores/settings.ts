@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS: Settings = {
 	daysBack: 7
 };
 
-function isValidSettings(value: unknown): value is Settings {
+export function isValidSettings(value: unknown): value is Settings {
 	if (typeof value !== 'object' || value === null) return false;
 	const s = value as Record<string, unknown>;
 	return (
@@ -35,7 +35,7 @@ function loadSettings(): Settings {
 	}
 }
 
-function createSettingsStore() {
+export function createSettingsStore() {
 	const { subscribe, set, update } = writable<Settings>(loadSettings());
 
 	return {

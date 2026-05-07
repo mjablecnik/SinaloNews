@@ -230,14 +230,14 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Update usage/help text to include the `reader` option
     - _Requirements: 7.1_
 
-- [ ] 9. Property-based tests
-  - [ ]* 9.1 Write property test for category extraction
+- [x] 9. Property-based tests
+  - [x]* 9.1 Write property test for category extraction
     - **Property 1: Category extraction produces correct counts**
     - Generate arbitrary lists of `ArticleSummary` with random tags
     - Assert: category counts sum to total articles, each count matches articles with that category
     - **Validates: Requirements 1.2, 1.3**
 
-  - [ ]* 9.2 Write property tests for read state management
+  - [x]* 9.2 Write property tests for read state management
     - **Property 3: Read/unread indicator correctness**
     - **Property 4: Viewing article marks as read (round-trip)**
     - **Property 5: Default unread for unknown articles**
@@ -245,26 +245,26 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Assert: isRead returns true iff ID in set; markAsRead adds ID; unknown IDs are unread
     - **Validates: Requirements 2.4, 3.6, 4.1, 4.2, 4.3, 4.5**
 
-  - [ ]* 9.3 Write property tests for settings persistence
+  - [x]* 9.3 Write property tests for settings persistence
     - **Property 6: Settings persistence round-trip**
     - **Property 10: Score validation bounds**
     - Generate arbitrary settings (minScore 0-10, daysBack > 0)
     - Assert: save then load produces identical object; values outside 0-10 are rejected
     - **Validates: Requirements 5.2, 5.4, 5.7**
 
-  - [ ]* 9.4 Write property test for API query parameter construction
+  - [x]* 9.4 Write property test for API query parameter construction
     - **Property 7: API query parameter construction**
     - Generate arbitrary combinations of category, subcategory, minScore, daysBack
     - Assert: constructed URL includes all non-null params, sort_by=published_at, sort_order=asc
     - **Validates: Requirements 2.1, 5.5, 6.2, 6.4**
 
-  - [ ]* 9.5 Write property test for pagination calculation
+  - [x]* 9.5 Write property test for pagination calculation
     - **Property 8: Pagination calculation**
     - Generate arbitrary total counts and page sizes
     - Assert: pages needed equals `Math.ceil(total / size)`, all items collected without gaps
     - **Validates: Requirements 6.3**
 
-  - [ ]* 9.6 Write property test for markdown rendering
+  - [x]* 9.6 Write property test for markdown rendering
     - **Property 11: Markdown rendering produces valid HTML**
     - Generate markdown strings with bold, italic, bullet syntax
     - Assert: output HTML contains corresponding `<strong>`, `<em>`, `<li>` elements
