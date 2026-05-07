@@ -270,14 +270,14 @@ Build a SvelteKit SPA (adapter-static) that displays classified articles from th
     - Assert: output HTML contains corresponding `<strong>`, `<em>`, `<li>` elements
     - **Validates: Requirements 8.2**
 
-- [ ] 10. Integration tests
-  - [ ]* 10.1 Write integration tests for navigation flow
+- [x] 10. Integration tests
+  - [x]* 10.1 Write integration tests for navigation flow
     - Test: Category Selection → Article List → Article Detail navigation
     - Test: Settings page navigation and back
     - Use mocked API responses
     - _Requirements: 1.4, 2.8, 3.8, 5.1, 5.6, 8.7_
 
-  - [ ]* 10.2 Write integration tests for error handling
+  - [x]* 10.2 Write integration tests for error handling
     - Test: API unreachable shows error message with retry
     - Test: Article detail 404 shows "not found" with back navigation
     - Test: Reload button re-fetches without triggering classification
