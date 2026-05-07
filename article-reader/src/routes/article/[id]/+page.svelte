@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { readState } from '$lib/stores/readState';
 	import { formatExtractedText, sanitizeSummary } from '$lib/utils';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
@@ -11,6 +12,14 @@
 	onMount(() => {
 		if (data.article) {
 			readState.markAsRead(data.article.id);
+
+			// If formatted_text is not ready yet, auto-reload after 5 seconds
+			if (data.article.extracted_text && !data.article.formatted_text) {
+				const timer = setTimeout(() => {
+					invalidateAll();
+				}, 5000);
+				return () => clearTimeout(timer);
+			}
 		}
 	});
 
@@ -38,6 +47,10 @@
 			: data.article?.extracted_text
 				? formatExtractedText(data.article.extracted_text)
 				: ''
+	);
+
+	let isFormatting = $derived(
+		!!(data.article?.extracted_text && !data.article?.formatted_text)
 	);
 </script>
 
@@ -97,6 +110,9 @@
 				<section>
 					<h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
 						Full Article
+						{#if isFormatting}
+							<span class="ml-2 text-xs font-normal text-blue-500">⟳ Formatting...</span>
+						{/if}
 					</h2>
 					<div class="prose max-w-none">
 						<MarkdownRenderer content={formattedText} />

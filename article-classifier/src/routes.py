@@ -1,3 +1,4 @@
+import asyncio
 import math
 from datetime import datetime
 
@@ -10,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from src.classifier_service import ClassifierService, is_processing, trigger_classification
 from src.config import settings
-from src.database import get_session
+from src.database import get_session, AsyncSessionFactory
 from src.models import Article, ArticleTag, ClassificationResult, Tag
 from src.schemas import (
     ArticleDetailResponse,
@@ -70,6 +71,20 @@ async def _format_article_text(raw_text: str) -> str:
     ]
     response = await llm.ainvoke(messages)
     return str(response.content).strip()
+
+
+async def _background_format_article(article_id: int, extracted_text: str) -> None:
+    """Background task: format article text and save to DB."""
+    try:
+        formatted = await _format_article_text(extracted_text)
+        async with AsyncSessionFactory() as session:
+            article = await session.get(Article, article_id)
+            if article and not article.formatted_text:
+                article.formatted_text = formatted
+                await session.commit()
+                log.info("article_formatted_background", article_id=article_id)
+    except Exception as exc:
+        log.error("background_format_failed", article_id=article_id, error=str(exc)[:200])
 
 
 def get_classifier_service() -> ClassifierService:
@@ -210,18 +225,11 @@ async def get_article_detail(
 
     article = result.article
 
-    # Lazy format: if extracted_text exists but formatted_text doesn't, generate it
+    # Lazy format: if extracted_text exists but formatted_text doesn't, trigger background formatting
     formatted_text = article.formatted_text
     if article.extracted_text and not formatted_text:
-        try:
-            formatted_text = await _format_article_text(article.extracted_text)
-            article.formatted_text = formatted_text
-            await session.commit()
-            log.info("article_formatted", article_id=article.id)
-        except Exception as exc:
-            log.error("article_formatting_failed", article_id=article.id, error=str(exc)[:200])
-            # Fall back to raw extracted_text
-            formatted_text = article.extracted_text
+        # Fire-and-forget: trigger formatting in background, return immediately with raw text
+        asyncio.create_task(_background_format_article(article.id, article.extracted_text))
 
     return ArticleDetailResponse(
         id=article.id,
