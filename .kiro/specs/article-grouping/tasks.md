@@ -89,7 +89,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Assert only the most recent articles up to the limit are passed to clustering
     - **Validates: Requirements 11.5**
 
-- [ ] 5. Checkpoint - Ensure all tests pass
+- [x] 5. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. API endpoints (groups + feed)
