@@ -3,6 +3,7 @@
 Feature: article-grouping
 """
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Optional
@@ -76,6 +77,19 @@ def _select_candidates(
 ) -> list[_FakeArticle]:
     """Pure version of the get_candidates filter (without category grouping)."""
     return [a for a in articles if _is_candidate(a, target_date)]
+
+
+def _partition_by_category(
+    candidates: list[_FakeArticle],
+) -> dict[str, list[_FakeArticle]]:
+    """Mirrors the category partitioning in GroupingService.get_candidates()."""
+    by_category: dict[str, list[_FakeArticle]] = defaultdict(list)
+    for article in candidates:
+        category = _get_category(article)
+        if category is None:
+            continue
+        by_category[category].append(article)
+    return dict(by_category)
 
 
 # ---------------------------------------------------------------------------
@@ -222,3 +236,76 @@ def test_candidate_selection_no_extra_articles(articles):
         assert article.classification.summary is not None, "candidate must have non-None summary"
         assert article.classification.summary != "", "candidate must have non-empty summary"
         assert not article.is_grouped, "candidate must not already be grouped"
+
+
+# ---------------------------------------------------------------------------
+# Feature: article-grouping, Property 2: Category partitioning correctness
+# ---------------------------------------------------------------------------
+
+
+@given(_articles_strategy)
+@h_settings(max_examples=100)
+def test_category_partitioning_no_article_in_multiple_buckets(articles):
+    """Property 2 (exclusivity): no article appears in more than one category bucket.
+
+    For any set of candidate articles, partitioning must produce disjoint buckets —
+    each article belongs to at most one category.
+
+    Validates: Requirements 1.2, 1.3
+    """
+    candidates = _select_candidates(articles, TARGET_DATE)
+    partitioned = _partition_by_category(candidates)
+
+    seen_ids: set[int] = set()
+    for category, bucket in partitioned.items():
+        for article in bucket:
+            assert article.id not in seen_ids, (
+                f"Article id={article.id} appeared in more than one category bucket "
+                f"(duplicate found in '{category}')"
+            )
+            seen_ids.add(article.id)
+
+
+@given(_articles_strategy)
+@h_settings(max_examples=100)
+def test_category_partitioning_correct_bucket_assignment(articles):
+    """Property 2 (correctness): each article is placed in the right category bucket.
+
+    Every article in a bucket must have _get_category() equal to that bucket's key.
+
+    Validates: Requirements 1.2, 1.3
+    """
+    candidates = _select_candidates(articles, TARGET_DATE)
+    partitioned = _partition_by_category(candidates)
+
+    for category, bucket in partitioned.items():
+        for article in bucket:
+            expected_category = _get_category(article)
+            assert expected_category == category, (
+                f"Article id={article.id} placed in bucket '{category}' "
+                f"but _get_category returns '{expected_category}'"
+            )
+
+
+@given(_articles_strategy)
+@h_settings(max_examples=100)
+def test_category_partitioning_all_categorisable_candidates_included(articles):
+    """Property 2 (completeness): every candidate with a derivable category is in a bucket.
+
+    No candidate that has at least one tag with a determinable category should be
+    silently dropped from all buckets.
+
+    Validates: Requirements 1.2, 1.3
+    """
+    candidates = _select_candidates(articles, TARGET_DATE)
+    partitioned = _partition_by_category(candidates)
+
+    all_bucketed_ids: set[int] = {a.id for bucket in partitioned.values() for a in bucket}
+
+    for article in candidates:
+        expected_category = _get_category(article)
+        if expected_category is not None:
+            assert article.id in all_bucketed_ids, (
+                f"Article id={article.id} has category '{expected_category}' "
+                f"but was not placed in any bucket"
+            )

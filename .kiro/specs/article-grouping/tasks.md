@@ -65,7 +65,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Assert candidate selection returns exactly articles matching all three conditions
     - **Validates: Requirements 1.1, 1.4**
 
-  - [ ]* 4.3 Write property test: Category partitioning correctness (Property 2)
+  - [x]* 4.3 Write property test: Category partitioning correctness (Property 2)
     - **Property 2: Category partitioning correctness**
     - Generate random articles with varying tag assignments
     - Assert partitioning produces correct category buckets with no article in multiple categories
