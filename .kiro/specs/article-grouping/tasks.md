@@ -166,12 +166,12 @@ This plan implements the article grouping feature as a post-classification pipel
     - Standalone articles continue using existing ArticleCard component
     - _Requirements: 8.1, 8.6_
 
-- [ ] 12. Frontend group detail page
-  - [ ] 12.1 Create group detail route `article-reader/src/routes/group/[id]/+page.ts`
+- [x] 12. Frontend group detail page
+  - [x] 12.1 Create group detail route `article-reader/src/routes/group/[id]/+page.ts`
     - Load group detail data via `getGroupDetail(id)`
     - _Requirements: 9.1_
 
-  - [ ] 12.2 Create group detail page `article-reader/src/routes/group/[id]/+page.svelte`
+  - [x] 12.2 Create group detail page `article-reader/src/routes/group/[id]/+page.svelte`
     - Display group title and full Group_Detail rendered as Markdown (reuse MarkdownRenderer component)
     - Display list of member articles with title, author, source domain, published_at
     - Each member article links to existing article detail page `/article/{id}` (internal navigation)
