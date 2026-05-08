@@ -11,6 +11,7 @@ from src.grouping_schemas import (
     ArticleForDetail,
     ClusteringLLMResponse,
     ClusteringOutput,
+    ClusterValidationLLMResponse,
     ExistingGroupForClustering,
     GroupDetailLLMResponse,
     GroupDetailOutput,
@@ -144,6 +145,9 @@ class GroupingPipeline:
         self._detail_llm = self._llm.with_structured_output(
             GroupDetailLLMResponse, include_raw=True
         )
+        self._validation_llm = self._llm.with_structured_output(
+            ClusterValidationLLMResponse, include_raw=True
+        )
         self._clustering_graph = self._build_clustering_graph()
         self._detail_graph = self._build_detail_graph()
 
@@ -260,3 +264,56 @@ class GroupingPipeline:
         if result is None:
             raise RuntimeError("Detail generation pipeline returned no result")
         return result
+
+    async def validate_cluster(
+        self,
+        topic: str,
+        articles: list[ArticleForClustering],
+    ) -> list[int]:
+        """Validate a single cluster. Returns list of article IDs that truly belong together."""
+        prompt_parts = [
+            f"## Proposed Group Topic: {topic}",
+            "",
+            "## Articles in this group:",
+        ]
+        for a in articles:
+            title = a.title or "(no title)"
+            prompt_parts.append(f"- Article ID {a.id}: {title}")
+            prompt_parts.append(f"  Summary: {a.summary}")
+            prompt_parts.append("")
+
+        prompt_parts.extend([
+            "## Task",
+            "Review the articles above. They were grouped together under the topic above.",
+            "Determine which articles TRULY report on the SAME SPECIFIC event/incident/announcement.",
+            "Remove any article that does NOT belong — it may be about a similar theme but a DIFFERENT event.",
+            "",
+            "Return a JSON object with:",
+            "- `valid_article_ids`: IDs of articles that genuinely belong together",
+            "- `removed_article_ids`: IDs of articles that do NOT belong in this group",
+            "- `reason`: Brief explanation of why articles were removed (or 'All articles valid' if none removed)",
+        ])
+
+        messages = [
+            {"role": "system", "content": (
+                "You are a strict news editor validating article clusters. "
+                "Your job is to remove articles that do NOT belong in a group. "
+                "Articles must report on the EXACT SAME specific event — same WHO, WHAT, WHERE. "
+                "Be strict: when in doubt, remove the article from the group."
+            )},
+            {"role": "user", "content": "\n".join(prompt_parts)},
+        ]
+
+        raw_result = await self._call_with_retry(self._validation_llm, messages)
+        parsed: ClusterValidationLLMResponse = raw_result["parsed"]
+
+        log.info(
+            "cluster_validation_complete",
+            topic=topic[:60],
+            original_count=len(articles),
+            valid_count=len(parsed.valid_article_ids),
+            removed_count=len(parsed.removed_article_ids),
+            reason=parsed.reason[:100] if parsed.reason else "",
+        )
+
+        return parsed.valid_article_ids

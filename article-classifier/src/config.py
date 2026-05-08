@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     GROUPING_MIN_ARTICLES: int = 2
     GROUPING_MAX_ARTICLES_PER_CATEGORY: int = 50
     GROUPING_MIN_SCORE: int = 0  # Only group articles with importance_score >= this value
+    GROUPING_VALIDATE_CLUSTERS: bool = True  # Validate each cluster with a separate LLM call
 
 
 settings = Settings()

@@ -224,6 +224,54 @@ class GroupingService:
                 existing_additions=len(validated.existing_group_additions),
             )
 
+            # Validate clusters with separate LLM calls (if enabled)
+            if settings.GROUPING_VALIDATE_CLUSTERS:
+                validated_groups = []
+                for cluster in validated.groups:
+                    cluster_articles = [
+                        ArticleForClustering(
+                            id=a.id,
+                            title=a.title,
+                            summary=a.classification_result.summary,
+                            source_url=a.url,
+                        )
+                        for a in [article_map[aid] for aid in cluster.article_ids if aid in article_map]
+                    ]
+                    if len(cluster_articles) < 2:
+                        continue
+                    try:
+                        valid_ids = await self._pipeline.validate_cluster(
+                            cluster.topic, cluster_articles
+                        )
+                        # Keep only validated IDs that are in the original cluster
+                        final_ids = [aid for aid in valid_ids if aid in article_map]
+                        if len(final_ids) >= 2:
+                            validated_groups.append(ClusterItem(
+                                article_ids=final_ids,
+                                topic=cluster.topic,
+                                justification=cluster.justification,
+                            ))
+                        else:
+                            log.info(
+                                "grouping_cluster_removed_after_validation",
+                                topic=cluster.topic[:60],
+                                original_count=len(cluster.article_ids),
+                                valid_count=len(final_ids),
+                            )
+                    except Exception as exc:
+                        log.warning(
+                            "grouping_validation_failed",
+                            topic=cluster.topic[:60],
+                            error=str(exc)[:200],
+                        )
+                        # On validation failure, keep original cluster
+                        validated_groups.append(cluster)
+                validated = ClusteringOutput(
+                    groups=validated_groups,
+                    existing_group_additions=validated.existing_group_additions,
+                    standalone_ids=validated.standalone_ids,
+                )
+
             # Generate details for new groups (LLM calls outside the DB transaction)
             new_group_data: list[tuple[list[int], object]] = []
             for cluster in validated.groups:

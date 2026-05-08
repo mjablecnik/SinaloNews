@@ -58,6 +58,15 @@ class ArticleForDetail(BaseModel):
     extracted_text: str | None
 
 
+# --- LLM Validation Response ---
+
+
+class ClusterValidationLLMResponse(BaseModel):
+    valid_article_ids: list[int]
+    removed_article_ids: list[int]
+    reason: str
+
+
 # --- Pipeline Output Data Classes ---
 
 
