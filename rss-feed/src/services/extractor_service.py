@@ -88,13 +88,19 @@ class ArticleExtractorService:
         if "\x00" in text:
             text = text.replace("\x00", "")
 
-        # If after cleanup the content is mostly non-printable, it's likely binary
+        # If after cleanup the content has control characters (excluding common
+        # whitespace), it's likely binary or corrupted data
         if len(text) > 0:
-            sample = text[:1000]
-            non_printable = sum(
-                1 for c in sample if not c.isprintable() and c not in "\n\r\t"
+            sample = text[:2000]
+            # Only count C0/C1 control chars (0x00-0x08, 0x0E-0x1F, 0x7F-0x9F)
+            # excluding tab, newline, carriage return
+            control_chars = sum(
+                1 for c in sample
+                if (ord(c) < 0x09)
+                or (0x0E <= ord(c) <= 0x1F)
+                or (0x7F <= ord(c) <= 0x9F)
             )
-            if non_printable / len(sample) > 0.1:
+            if control_chars / len(sample) > 0.05:
                 return None
 
         return text if text.strip() else None
@@ -104,25 +110,30 @@ class ArticleExtractorService:
             select(Article).where(Article.feed_id == feed.id, Article.status == "pending")
         )
         articles = result.scalars().all()
+        # Cache identifiers upfront to avoid lazy-load after rollback
+        article_ids = [(a.id, a.url) for a in articles]
 
-        total = len(articles)
+        total = len(article_ids)
         extracted = 0
         failed = 0
         errors: list[str] = []
 
-        for article in articles:
+        for article_id, article_url in article_ids:
             try:
+                article = await db.get(Article, article_id)
+                if article is None:
+                    continue
                 await self.extract_article(article, db)
                 if article.status == "extracted":
                     extracted += 1
                 elif article.status == "failed":
                     failed += 1
-                    errors.append(f"Article {article.id} ({article.url}): download failed")
+                    errors.append(f"Article {article_id} ({article_url}): download failed")
             except Exception as exc:
                 await db.rollback()
                 failed += 1
-                errors.append(f"Article {article.id} ({article.url}): {exc}")
-                logger.warning("article_extraction_error", article_id=article.id, error=str(exc))
+                errors.append(f"Article {article_id} ({article_url}): {exc}")
+                logger.warning("article_extraction_error", article_id=article_id, error=str(exc))
 
         return {
             "feed_id": feed.id,
