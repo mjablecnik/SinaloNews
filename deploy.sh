@@ -75,6 +75,9 @@ setup_reader() {
 run_migrations_classifier() {
     echo "=== Running article-classifier migrations ==="
     APP_NAME=$(grep '^app\s*=' "$ROOT_DIR/article-classifier/fly.toml" | head -1 | sed 's/^app\s*=\s*"\(.*\)"/\1/')
+    echo "Waking up machine..."
+    curl -s -o /dev/null "https://${APP_NAME}.fly.dev/health" || true
+    sleep 5
     fly ssh console --app "$APP_NAME" -C "python -m alembic upgrade head"
     echo ""
 }
@@ -82,6 +85,9 @@ run_migrations_classifier() {
 run_migrations_rss() {
     echo "=== Running rss-feed migrations ==="
     APP_NAME=$(grep '^app\s*=' "$ROOT_DIR/rss-feed/fly.toml" | head -1 | sed 's/^app\s*=\s*"\(.*\)"/\1/')
+    echo "Waking up machine..."
+    curl -s -o /dev/null "https://${APP_NAME}.fly.dev/health" || true
+    sleep 5
     fly ssh console --app "$APP_NAME" -C "python -m alembic upgrade head"
     echo ""
 }
@@ -109,10 +115,8 @@ case "${1:-all}" in
         ;;
     all)
         deploy_rss
-        run_migrations_rss
         deploy_agent
         deploy_classifier
-        run_migrations_classifier
         deploy_reader
         ;;
     *)
