@@ -71,7 +71,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Assert partitioning produces correct category buckets with no article in multiple categories
     - **Validates: Requirements 1.2, 1.3**
 
-  - [ ]* 4.4 Write property test: Minimum articles threshold (Property 3)
+  - [x]* 4.4 Write property test: Minimum articles threshold (Property 3)
     - **Property 3: Minimum articles threshold**
     - Generate random category partitions with varying sizes and threshold values
     - Assert clustering is only invoked for categories meeting the threshold

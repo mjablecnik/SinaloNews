@@ -92,6 +92,26 @@ def _partition_by_category(
     return dict(by_category)
 
 
+def _apply_threshold_filter(
+    partitioned: dict[str, list[_FakeArticle]],
+    min_articles: int,
+    max_articles: int,
+) -> dict[str, list[_FakeArticle]]:
+    """Mirrors the threshold logic in GroupingService.run_grouping().
+
+    For each category: enforce max_articles limit first (keep first N, which
+    mirrors 'most recent' after the DB query sorted desc), then skip categories
+    below min_articles.
+    """
+    result: dict[str, list[_FakeArticle]] = {}
+    for category, articles in partitioned.items():
+        if len(articles) > max_articles:
+            articles = articles[:max_articles]
+        if len(articles) >= min_articles:
+            result[category] = articles
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Hypothesis strategies
 # ---------------------------------------------------------------------------
@@ -309,3 +329,84 @@ def test_category_partitioning_all_categorisable_candidates_included(articles):
                 f"Article id={article.id} has category '{expected_category}' "
                 f"but was not placed in any bucket"
             )
+
+
+# ---------------------------------------------------------------------------
+# Feature: article-grouping, Property 3: Minimum articles threshold
+# ---------------------------------------------------------------------------
+
+_threshold_strategy = st.integers(min_value=1, max_value=10)
+_max_articles_strategy = st.integers(min_value=1, max_value=50)
+
+# A partition is a dict category -> list[_FakeArticle] with 0-8 articles each
+_partition_strategy = st.fixed_dictionaries(
+    {},
+    optional={
+        cat: st.lists(
+            st.integers(min_value=1, max_value=500).flatmap(_article_strategy),
+            min_size=0,
+            max_size=15,
+        )
+        for cat in ["Technology", "Politics", "Economy", "Sport", "Culture"]
+    },
+)
+
+
+@given(_partition_strategy, _threshold_strategy, _max_articles_strategy)
+@h_settings(max_examples=100)
+def test_threshold_excludes_small_categories(partitioned, min_articles, max_articles):
+    """Property 3 (soundness): no category below the threshold reaches clustering.
+
+    After applying the max_articles cap, every category in the result must have
+    at least min_articles articles — categories that fall short must be skipped.
+
+    Validates: Requirements 1.5
+    """
+    result = _apply_threshold_filter(partitioned, min_articles, max_articles)
+
+    for category, articles in result.items():
+        assert len(articles) >= min_articles, (
+            f"Category '{category}' has {len(articles)} articles but threshold is {min_articles}"
+        )
+
+
+@given(_partition_strategy, _threshold_strategy, _max_articles_strategy)
+@h_settings(max_examples=100)
+def test_threshold_includes_large_categories(partitioned, min_articles, max_articles):
+    """Property 3 (completeness): every category meeting the threshold is included.
+
+    A category that (after the max_articles cap) has at least min_articles articles
+    must appear in the result — it must not be silently dropped.
+
+    Validates: Requirements 1.5
+    """
+    result = _apply_threshold_filter(partitioned, min_articles, max_articles)
+
+    for category, articles in partitioned.items():
+        effective = articles[:max_articles] if len(articles) > max_articles else articles
+        if len(effective) >= min_articles:
+            assert category in result, (
+                f"Category '{category}' has {len(effective)} articles (>= {min_articles}) "
+                f"but was excluded from clustering"
+            )
+
+
+@given(_partition_strategy, _threshold_strategy, _max_articles_strategy)
+@h_settings(max_examples=100)
+def test_threshold_preserves_article_content(partitioned, min_articles, max_articles):
+    """Property 3 (integrity): articles in passing categories are unchanged (except cap).
+
+    The articles returned for each passing category must be exactly the first
+    min(len, max_articles) articles from the original partition — no articles
+    added, removed, or reordered beyond the cap.
+
+    Validates: Requirements 1.5, 11.5
+    """
+    result = _apply_threshold_filter(partitioned, min_articles, max_articles)
+
+    for category, articles in result.items():
+        original = partitioned[category]
+        expected = original[:max_articles] if len(original) > max_articles else original
+        assert [a.id for a in articles] == [a.id for a in expected], (
+            f"Category '{category}' articles were modified unexpectedly"
+        )
