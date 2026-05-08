@@ -16,10 +16,21 @@ class ContentType(str, Enum):
     CONSPIRACY_THEORY = "CONSPIRACY_THEORY"
     CLICKBAIT = "CLICKBAIT"
     NO_USEFUL_CONTENT = "NO_USEFUL_CONTENT"
+    DIGEST = "DIGEST"
     OPINION_EDITORIAL = "OPINION_EDITORIAL"
     BREAKING_NEWS = "BREAKING_NEWS"
     GENERAL_VALUABLE_CONTENT = "GENERAL_VALUABLE_CONTENT"
     UNIVERSAL_RELEVANT_CONTENT = "UNIVERSAL_RELEVANT_CONTENT"
+
+
+# Content types excluded from article grouping
+GROUPING_EXCLUDED_CONTENT_TYPES = {
+    ContentType.CONSPIRACY_THEORY.value,
+    ContentType.CLICKBAIT.value,
+    ContentType.NO_USEFUL_CONTENT.value,
+    ContentType.DIGEST.value,
+    ContentType.OPINION_EDITORIAL.value,
+}
 
 
 def validate_content_type(value: str) -> str:

@@ -46,6 +46,7 @@ _CONTENT_TYPES_DOC = """Available content types:
 - CONSPIRACY_THEORY: Content promoting unfounded conspiracy theories or misinformation
 - CLICKBAIT: Sensationalized content with misleading headlines designed to generate clicks
 - NO_USEFUL_CONTENT: Content with no informational value (ads, spam, broken content, satire)
+- DIGEST: Daily news roundups, summaries of multiple unrelated events, "top stories of the day" compilations
 - OPINION_EDITORIAL: Subjective opinion pieces, commentaries, columns, or reviews representing the author's personal viewpoint
 - BREAKING_NEWS: Hard news with immediate impact (war, natural disasters, government collapse, major security events)
 - GENERAL_VALUABLE_CONTENT: Informative content of general interest

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.config import settings
+from src.constants import GROUPING_EXCLUDED_CONTENT_TYPES
 from src.database import AsyncSessionFactory
 from src.grouping_pipeline import GroupingPipeline
 from src.grouping_schemas import (
@@ -41,6 +42,7 @@ class GroupingService:
                 ClassificationResult.summary.is_not(None),
                 ClassificationResult.summary != "",
                 ClassificationResult.importance_score >= settings.GROUPING_MIN_SCORE,
+                ClassificationResult.content_type.notin_(GROUPING_EXCLUDED_CONTENT_TYPES),
                 ArticleGroupMember.id.is_(None),
             )
             .options(
