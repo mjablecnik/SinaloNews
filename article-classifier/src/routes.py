@@ -254,12 +254,18 @@ def _cr_to_feed_item(cr: ClassificationResult) -> FeedItem:
     )
 
 
-def _feed_date_key(item: FeedItem) -> datetime:
+def _feed_date_key(item: FeedItem) -> tuple[date, int]:
+    """Sort key: (date descending, importance descending within same day).
+
+    Returns (date, importance_score) — caller uses reverse=True.
+    """
     if item.type == "article":
-        return item.published_at or datetime.min
-    if item.grouped_date:
-        return datetime(item.grouped_date.year, item.grouped_date.month, item.grouped_date.day)
-    return datetime.min
+        d = item.published_at.date() if item.published_at else date.min
+    elif item.grouped_date:
+        d = item.grouped_date
+    else:
+        d = date.min
+    return (d, item.importance_score)
 
 
 @router.get("/api/articles", response_model=PaginatedResponse)
@@ -615,9 +621,9 @@ async def get_feed(
     if subcategory is not None:
         group_rows = [g for g in group_rows if _group_has_subcategory(g.members, subcategory)]
 
-    # Merge and sort by date ascending
+    # Merge and sort: newest day first, highest importance within same day
     all_items = [_cr_to_feed_item(cr) for cr in article_rows] + [_group_to_feed_item(g) for g in group_rows]
-    all_items.sort(key=_feed_date_key)
+    all_items.sort(key=_feed_date_key, reverse=True)
 
     total = len(all_items)
     pages = math.ceil(total / size) if total > 0 else 0
