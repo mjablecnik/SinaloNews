@@ -1,9 +1,11 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -31,6 +33,9 @@ class Article(Base):
     status: Mapped[str | None] = mapped_column(String(20))
 
     classification_result: Mapped["ClassificationResult | None"] = relationship(
+        back_populates="article", uselist=False
+    )
+    group_member: Mapped["ArticleGroupMember | None"] = relationship(
         back_populates="article", uselist=False
     )
 
@@ -89,3 +94,42 @@ class ArticleTag(Base):
     __table_args__ = (
         UniqueConstraint("classification_result_id", "tag_id", name="uq_article_tag"),
     )
+
+
+class ArticleGroup(Base):
+    __tablename__ = "article_groups"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    detail: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
+    grouped_date: Mapped[date] = mapped_column(Date, nullable=False)
+    llm_model: Mapped[str | None] = mapped_column(String(200))
+    token_usage: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
+
+    members: Mapped[list["ArticleGroupMember"]] = relationship(
+        back_populates="group", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (Index("ix_article_groups_category_date", "category", "grouped_date"),)
+
+
+class ArticleGroupMember(Base):
+    __tablename__ = "article_group_members"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    group_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("article_groups.id", ondelete="CASCADE"), nullable=False
+    )
+    article_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("articles.id"), unique=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=func.now())
+
+    group: Mapped["ArticleGroup"] = relationship(back_populates="members")
+    article: Mapped["Article"] = relationship(back_populates="group_member")
