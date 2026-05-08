@@ -111,8 +111,8 @@ def _build_detail_prompt(member_articles: list[ArticleForDetail]) -> str:
         "## Instructions",
         "Based on the source articles above, produce a JSON object with:",
         "- `title`: A concise title in Czech describing the shared topic (max 100 characters).",
-        "- `summary`: A short one-paragraph summary in Czech (2-4 sentences) suitable for "
-        "a card preview in a news reader. Do NOT include Markdown formatting.",
+        "- `summary`: A short one-paragraph summary in Czech Markdown (2-4 sentences) suitable for "
+        "a card preview in a news reader. May use bold for key terms.",
         "- `detail`: A longer combined article in Czech Markdown (approximately 2-5 paragraphs) "
         "that synthesizes all key facts, perspectives, and conclusions from the source articles. "
         "Include differing perspectives when present. Only include information from the sources — "
