@@ -59,7 +59,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Record llm_model and token_usage on each ArticleGroup
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2.4, 2.8, 2.9, 4.6, 4.7, 5.4, 5.5, 10.3, 10.7, 11.3, 11.4, 11.5_
 
-  - [ ]* 4.2 Write property test: Candidate selection correctness (Property 1)
+  - [x]* 4.2 Write property test: Candidate selection correctness (Property 1)
     - **Property 1: Candidate selection correctness**
     - Generate random article sets with varying dates, classification states, summary presence, and group memberships
     - Assert candidate selection returns exactly articles matching all three conditions
