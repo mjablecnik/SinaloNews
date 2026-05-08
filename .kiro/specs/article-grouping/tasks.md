@@ -93,7 +93,7 @@ This plan implements the article grouping feature as a post-classification pipel
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. API endpoints (groups + feed)
-  - [ ] 6.1 Add group and feed endpoints to `article-classifier/src/routes.py`
+  - [x] 6.1 Add group and feed endpoints to `article-classifier/src/routes.py`
     - `POST /api/groups/generate` — trigger grouping for a date (default: today), return stats
     - `GET /api/groups` — list groups with filters: category, date, date_from, date_to, page, size
     - `GET /api/groups/{id}` — group detail with member articles
@@ -127,7 +127,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Assert items sorted by date ascending and pagination returns correct counts
     - **Validates: Requirements 7.9, 7.10**
 
-- [ ] 7. Checkpoint - Ensure all tests pass
+- [x] 7. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. CLI script extension
