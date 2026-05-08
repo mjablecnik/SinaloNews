@@ -35,7 +35,13 @@ class ArticleExtractorService:
                 await db.commit()
                 return article
             response.raise_for_status()
-            html = response.text
+            html = self._safe_decode(response)
+            if html is None:
+                log.warning("article_not_text", content_type=response.headers.get("content-type"))
+                article.status = "failed"
+                article.updated_at = datetime.utcnow()
+                await db.commit()
+                return article
         except httpx.HTTPError as exc:
             log.warning("article_download_failed", error=str(exc))
             article.status = "failed"
@@ -58,6 +64,41 @@ class ArticleExtractorService:
         await db.commit()
         return article
 
+    @staticmethod
+    def _safe_decode(response: httpx.Response) -> str | None:
+        """Decode response content, returning None if it's not valid text.
+
+        Rejects binary responses and strips null bytes that PostgreSQL
+        cannot store in TEXT/VARCHAR columns.
+        """
+        content_type = response.headers.get("content-type", "")
+        # Reject obviously binary content types
+        if any(
+            t in content_type
+            for t in ("application/pdf", "application/octet-stream", "image/", "audio/", "video/")
+        ):
+            return None
+
+        try:
+            text = response.text
+        except (UnicodeDecodeError, LookupError):
+            return None
+
+        # PostgreSQL cannot store null bytes in TEXT columns
+        if "\x00" in text:
+            text = text.replace("\x00", "")
+
+        # If after cleanup the content is mostly non-printable, it's likely binary
+        if len(text) > 0:
+            sample = text[:1000]
+            non_printable = sum(
+                1 for c in sample if not c.isprintable() and c not in "\n\r\t"
+            )
+            if non_printable / len(sample) > 0.1:
+                return None
+
+        return text if text.strip() else None
+
     async def extract_feed_articles(self, feed: Feed, db: AsyncSession) -> dict:
         result = await db.execute(
             select(Article).where(Article.feed_id == feed.id, Article.status == "pending")
@@ -78,6 +119,7 @@ class ArticleExtractorService:
                     failed += 1
                     errors.append(f"Article {article.id} ({article.url}): download failed")
             except Exception as exc:
+                await db.rollback()
                 failed += 1
                 errors.append(f"Article {article.id} ({article.url}): {exc}")
                 logger.warning("article_extraction_error", article_id=article.id, error=str(exc))

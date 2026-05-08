@@ -35,6 +35,7 @@ class BatchProcessor:
                 articles_discovered += len(new_articles)
                 log.info("feed_parsed_in_batch", feed_id=feed.id, new_articles=len(new_articles))
             except Exception as exc:
+                await db.rollback()
                 errors.append(f"Feed {feed.id}: parse error: {exc}")
                 log.warning("feed_parse_error", feed_id=feed.id, error=str(exc))
                 continue
@@ -44,6 +45,7 @@ class BatchProcessor:
                 articles_extracted += extract_result["extracted"]
                 errors.extend(extract_result["errors"])
             except Exception as exc:
+                await db.rollback()
                 errors.append(f"Feed {feed.id}: extraction error: {exc}")
                 log.warning("feed_extraction_error", feed_id=feed.id, error=str(exc))
 
