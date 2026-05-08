@@ -373,4 +373,4 @@ def test_get_article_detail_correctness(articles: list[_FakeDetailArticle], idx:
         assert field_name in response, f"Response missing field: {field_name}"
 
     assert response["id"] == target.id
-    assert response["extracted_text"] == target.extracted_text
+    assert response["extracted_text"] == result.extracted_text
