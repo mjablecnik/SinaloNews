@@ -12,6 +12,12 @@
 		settings.set({ minScore, daysBack });
 		goto('/');
 	}
+
+	function clearCache() {
+		localStorage.removeItem('article-reader:read-articles');
+		localStorage.removeItem('article-reader:category-order');
+		window.location.reload();
+	}
 </script>
 
 <main class="container mx-auto max-w-md px-4 py-8">
@@ -57,4 +63,21 @@
 			Save Settings
 		</button>
 	</form>
+
+	<hr class="my-8 border-gray-200" />
+
+	<div class="space-y-3">
+		<h2 class="text-sm font-medium text-gray-700">Cache</h2>
+		<p class="text-xs text-gray-500">
+			Clear cached data (read state, category order). Settings will be preserved. The page will
+			reload and fetch fresh data from the API.
+		</p>
+		<button
+			onclick={clearCache}
+			type="button"
+			class="w-full rounded border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+		>
+			Clear Cache & Reload
+		</button>
+	</div>
 </main>
