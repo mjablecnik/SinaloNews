@@ -1,5 +1,5 @@
 import { PUBLIC_ARTICLE_API_URL } from '$env/static/public';
-import type { ArticleDetail, ArticleSummary, PaginatedResponse } from './types';
+import type { ArticleDetail, ArticleSummary, FeedResponse, GroupDetail, PaginatedResponse } from './types';
 
 export interface ArticleQueryParams {
 	category?: string;
@@ -41,6 +41,37 @@ export async function getArticleDetail(id: number): Promise<ArticleDetail> {
 		throw new Error(`Failed to fetch article: ${response.status} ${response.statusText}`);
 	}
 	return response.json() as Promise<ArticleDetail>;
+}
+
+export interface FeedQueryParams {
+	category?: string;
+	subcategory?: string;
+	date_from?: string;
+	date_to?: string;
+	min_score?: number;
+	page?: number;
+	size?: number;
+}
+
+export async function getFeed(params: FeedQueryParams): Promise<FeedResponse> {
+	const url = buildUrl('/api/feed', params as Record<string, string | number | undefined>);
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`);
+	}
+	return response.json() as Promise<FeedResponse>;
+}
+
+export async function getGroupDetail(id: number): Promise<GroupDetail> {
+	const url = `${PUBLIC_ARTICLE_API_URL}/api/groups/${id}`;
+	const response = await fetch(url);
+	if (!response.ok) {
+		if (response.status === 404) {
+			throw new Error('Group not found');
+		}
+		throw new Error(`Failed to fetch group: ${response.status} ${response.statusText}`);
+	}
+	return response.json() as Promise<GroupDetail>;
 }
 
 export async function getAllArticles(params: ArticleQueryParams): Promise<ArticleSummary[]> {

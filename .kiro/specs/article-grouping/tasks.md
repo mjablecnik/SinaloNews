@@ -146,7 +146,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Add `FeedResponse` interface (paginated)
     - _Requirements: 7.6, 7.7, 8.1, 9.1_
 
-  - [ ] 9.2 Add feed and group API functions to `article-reader/src/lib/api.ts`
+  - [x] 9.2 Add feed and group API functions to `article-reader/src/lib/api.ts`
     - Add `getFeed(params)` function calling GET /api/feed with filter params
     - Add `getGroupDetail(id)` function calling GET /api/groups/{id}
     - _Requirements: 8.1, 9.1_
