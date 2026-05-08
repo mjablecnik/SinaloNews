@@ -6,22 +6,22 @@ This plan implements the article grouping feature as a post-classification pipel
 
 ## Tasks
 
-- [ ] 1. Database models and migration
-  - [ ] 1.1 Add ArticleGroup and ArticleGroupMember SQLAlchemy models to `article-classifier/src/models.py`
+- [x] 1. Database models and migration
+  - [x] 1.1 Add ArticleGroup and ArticleGroupMember SQLAlchemy models to `article-classifier/src/models.py`
     - Add `ArticleGroup` model with columns: id, title, summary, detail, category, grouped_date, llm_model, token_usage, created_at, updated_at
     - Add composite index on `(category, grouped_date)`
     - Add `ArticleGroupMember` model with columns: id, group_id (FK), article_id (FK, UNIQUE), created_at
     - Add relationships: ArticleGroup.members, ArticleGroupMember.group, ArticleGroupMember.article
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-  - [ ] 1.2 Create Alembic migration `article-classifier/alembic/versions/002_article_groups.py`
+  - [x] 1.2 Create Alembic migration `article-classifier/alembic/versions/002_article_groups.py`
     - Create `article_groups` table with all columns and composite index
     - Create `article_group_members` table with foreign keys and unique constraint on article_id
     - Add ON DELETE CASCADE for group_id foreign key
     - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 2. Configuration extensions
-  - [ ] 2.1 Add grouping settings to `article-classifier/src/config.py`
+- [x] 2. Configuration extensions
+  - [x] 2.1 Add grouping settings to `article-classifier/src/config.py`
     - Add `GROUPING_LLM_MODEL: str | None = None` (falls back to LLM_MODEL)
     - Add `GROUPING_MIN_ARTICLES: int = 2`
     - Add `GROUPING_MAX_ARTICLES_PER_CATEGORY: int = 50`

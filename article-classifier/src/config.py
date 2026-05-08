@@ -24,5 +24,10 @@ class Settings(BaseSettings):
     LANGSMITH_PROJECT: str = "sinalo-classifier"
     LANGSMITH_TRACING: str = "true"
 
+    # Grouping
+    GROUPING_LLM_MODEL: str | None = None
+    GROUPING_MIN_ARTICLES: int = 2
+    GROUPING_MAX_ARTICLES_PER_CATEGORY: int = 50
+
 
 settings = Settings()
