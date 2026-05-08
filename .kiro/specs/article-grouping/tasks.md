@@ -28,8 +28,8 @@ This plan implements the article grouping feature as a post-classification pipel
     - Update `.env.example` with new optional variables
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-- [ ] 3. Grouping pipeline (LLM calls)
-  - [ ] 3.1 Create Pydantic schemas in `article-classifier/src/grouping_schemas.py`
+- [x] 3. Grouping pipeline (LLM calls)
+  - [x] 3.1 Create Pydantic schemas in `article-classifier/src/grouping_schemas.py`
     - Define `ArticleForClustering` (id, title, summary, source_url)
     - Define `ExistingGroupForClustering` (group_id, title, summary)
     - Define `ClusterItem`, `ExistingGroupAddition`, `ClusteringLLMResponse` for structured output
@@ -40,7 +40,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Define API response schemas: `GroupSummaryResponse`, `GroupDetailResponse`, `GroupMemberResponse`, `FeedItem`, `FeedResponse`, `GroupingTriggerResponse`
     - _Requirements: 10.4, 10.5, 6.5, 6.7, 7.6, 7.7_
 
-  - [ ] 3.2 Implement grouping pipeline in `article-classifier/src/grouping_pipeline.py`
+  - [x] 3.2 Implement grouping pipeline in `article-classifier/src/grouping_pipeline.py`
     - Create `GroupingPipeline` class with LangGraph state graph
     - Implement `cluster()` method: builds English prompt with article titles/summaries and existing groups, uses structured output to get `ClusteringLLMResponse`
     - Implement `generate_detail()` method: builds English prompt with full extracted_text of member articles, instructs output in Czech, uses structured output to get `GroupDetailLLMResponse`
