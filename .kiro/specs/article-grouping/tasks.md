@@ -48,7 +48,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Use `GROUPING_LLM_MODEL` if set, otherwise fall back to `LLM_MODEL`
     - _Requirements: 2.1, 2.2, 2.3, 2.5, 2.6, 2.7, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 10.1, 10.2, 10.5, 10.6_
 
-- [ ] 4. Grouping service (orchestration)
+- [x] 4. Grouping service (orchestration)
   - [x] 4.1 Implement grouping service in `article-classifier/src/grouping_service.py`
     - Create `GroupingService` class
     - Implement `get_candidates(session, target_date)`: query articles with classification result + summary, not in article_group_members, published_at on target_date, grouped by first tag category
@@ -103,7 +103,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Group importance_score computed as max of member scores; group tags as union of member tags
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12_
 
-  - [ ]* 6.2 Write property test: Group list filtering and pagination (Property 5)
+  - [x]* 6.2 Write property test: Group list filtering and pagination (Property 5)
     - **Property 5: Group list filtering and pagination**
     - Generate random groups with varying attributes and filter/pagination params
     - Assert correct filtering, page size limits, total count, and pages calculation

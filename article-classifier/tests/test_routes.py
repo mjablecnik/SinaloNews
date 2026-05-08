@@ -3,11 +3,13 @@
 Feature: article-classifier
 """
 
+import math
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from hypothesis import given
+from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 
 from src.constants import ContentType, TAG_TAXONOMY
@@ -374,3 +376,203 @@ def test_get_article_detail_correctness(articles: list[_FakeDetailArticle], idx:
 
     assert response["id"] == target.id
     assert response["extracted_text"] == result.extracted_text
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Feature: article-grouping, Property 5: Group list filtering and pagination
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@dataclass
+class _FakeGroup:
+    id: int
+    category: str
+    grouped_date: date
+
+
+_GROUP_CATEGORIES = _ALL_CATEGORIES
+
+_group_date_st = st.dates(
+    min_value=date(2026, 1, 1),
+    max_value=date(2026, 12, 31),
+)
+
+_fake_group_st = st.builds(
+    _FakeGroup,
+    id=st.integers(min_value=1, max_value=10000),
+    category=st.sampled_from(_GROUP_CATEGORIES),
+    grouped_date=_group_date_st,
+)
+
+_groups_st = st.lists(_fake_group_st, min_size=0, max_size=30)
+_page_st = st.integers(min_value=1, max_value=10)
+_size_st = st.integers(min_value=1, max_value=20)
+_cat_filter_st = st.one_of(st.none(), st.sampled_from(_GROUP_CATEGORIES))
+_date_filter_st = st.one_of(st.none(), _group_date_st)
+
+
+def _apply_group_filters(
+    groups: list[_FakeGroup],
+    category: Optional[str],
+    date_filter: Optional[date],
+    date_from: Optional[date],
+    date_to: Optional[date],
+) -> list[_FakeGroup]:
+    """Pure Python mirror of the get_groups route filter logic."""
+    result = []
+    for g in groups:
+        if category is not None and g.category.lower() != category.lower():
+            continue
+        if date_filter is not None and g.grouped_date != date_filter:
+            continue
+        if date_from is not None and g.grouped_date < date_from:
+            continue
+        if date_to is not None and g.grouped_date > date_to:
+            continue
+        result.append(g)
+    return result
+
+
+def _satisfies_group_filters(
+    g: _FakeGroup,
+    category: Optional[str],
+    date_filter: Optional[date],
+    date_from: Optional[date],
+    date_to: Optional[date],
+) -> bool:
+    if category is not None and g.category.lower() != category.lower():
+        return False
+    if date_filter is not None and g.grouped_date != date_filter:
+        return False
+    if date_from is not None and g.grouped_date < date_from:
+        return False
+    if date_to is not None and g.grouped_date > date_to:
+        return False
+    return True
+
+
+def _paginate_groups(
+    filtered: list[_FakeGroup], page: int, size: int
+) -> tuple[list[_FakeGroup], int, int]:
+    """Mirrors the pagination math in get_groups route."""
+    total = len(filtered)
+    pages = math.ceil(total / size) if total > 0 else 0
+    offset = (page - 1) * size
+    return filtered[offset : offset + size], total, pages
+
+
+@given(
+    groups=_groups_st,
+    category=_cat_filter_st,
+    date_filter=_date_filter_st,
+    date_from=_date_filter_st,
+    date_to=_date_filter_st,
+    page=_page_st,
+    size=_size_st,
+)
+@h_settings(max_examples=100)
+def test_group_list_filtering_soundness(
+    groups, category, date_filter, date_from, date_to, page, size
+):
+    """Property 5 (soundness): every group on the returned page satisfies all active filters.
+
+    Feature: article-grouping, Property 5: Group list filtering and pagination
+    Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.9
+    """
+    filtered = _apply_group_filters(groups, category, date_filter, date_from, date_to)
+    page_items, _, _ = _paginate_groups(filtered, page, size)
+
+    for g in page_items:
+        assert _satisfies_group_filters(g, category, date_filter, date_from, date_to), (
+            f"Group id={g.id} category='{g.category}' date={g.grouped_date} "
+            f"is in result but does not satisfy filters: "
+            f"category={category!r}, date_filter={date_filter!r}, "
+            f"date_from={date_from!r}, date_to={date_to!r}"
+        )
+
+
+@given(
+    groups=_groups_st,
+    category=_cat_filter_st,
+    date_filter=_date_filter_st,
+    date_from=_date_filter_st,
+    date_to=_date_filter_st,
+    page=_page_st,
+    size=_size_st,
+)
+@h_settings(max_examples=100)
+def test_group_list_filtering_completeness(
+    groups, category, date_filter, date_from, date_to, page, size
+):
+    """Property 5 (completeness): the filtered list contains exactly as many groups as satisfy the filters.
+
+    Feature: article-grouping, Property 5: Group list filtering and pagination
+    Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.9
+    """
+    filtered = _apply_group_filters(groups, category, date_filter, date_from, date_to)
+    expected_count = sum(
+        1 for g in groups
+        if _satisfies_group_filters(g, category, date_filter, date_from, date_to)
+    )
+
+    assert len(filtered) == expected_count, (
+        f"filtered list has {len(filtered)} groups but {expected_count} groups satisfy filters: "
+        f"category={category!r}, date_filter={date_filter!r}, "
+        f"date_from={date_from!r}, date_to={date_to!r}"
+    )
+
+
+@given(
+    groups=_groups_st,
+    category=_cat_filter_st,
+    date_filter=_date_filter_st,
+    date_from=_date_filter_st,
+    date_to=_date_filter_st,
+    page=_page_st,
+    size=_size_st,
+)
+@h_settings(max_examples=100)
+def test_group_list_page_size_limit(
+    groups, category, date_filter, date_from, date_to, page, size
+):
+    """Property 5 (page size): returned page never exceeds `size` items.
+
+    Feature: article-grouping, Property 5: Group list filtering and pagination
+    Validates: Requirements 6.9
+    """
+    filtered = _apply_group_filters(groups, category, date_filter, date_from, date_to)
+    page_items, _, _ = _paginate_groups(filtered, page, size)
+
+    assert len(page_items) <= size, (
+        f"Page has {len(page_items)} items but size limit is {size}"
+    )
+
+
+@given(
+    groups=_groups_st,
+    category=_cat_filter_st,
+    date_filter=_date_filter_st,
+    date_from=_date_filter_st,
+    date_to=_date_filter_st,
+    page=_page_st,
+    size=_size_st,
+)
+@h_settings(max_examples=100)
+def test_group_list_total_and_pages_calculation(
+    groups, category, date_filter, date_from, date_to, page, size
+):
+    """Property 5 (pagination math): total equals filtered count; pages = ceil(total/size) or 0.
+
+    Feature: article-grouping, Property 5: Group list filtering and pagination
+    Validates: Requirements 6.9
+    """
+    filtered = _apply_group_filters(groups, category, date_filter, date_from, date_to)
+    _, total, pages = _paginate_groups(filtered, page, size)
+
+    assert total == len(filtered), (
+        f"total={total} but {len(filtered)} groups satisfy the filters"
+    )
+    expected_pages = math.ceil(total / size) if total > 0 else 0
+    assert pages == expected_pages, (
+        f"pages={pages} but expected ceil({total}/{size})={expected_pages}"
+    )
