@@ -139,7 +139,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
 
 - [ ] 9. Frontend types and API functions
-  - [ ] 9.1 Add grouping types to `article-reader/src/lib/types.ts`
+  - [x] 9.1 Add grouping types to `article-reader/src/lib/types.ts`
     - Add `FeedItem` interface with type discriminator ('article' | 'group')
     - Add `GroupDetail` interface with full group fields and members array
     - Add `GroupMemberArticle` interface
