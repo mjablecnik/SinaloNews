@@ -75,6 +75,9 @@ Commands:
   classify              Trigger classification of unprocessed articles
   status                Show classification processing status
   articles [options]    List classified articles with filters
+  group [options]       Trigger grouping for articles (default: today)
+  groups [options]      List article groups with filters
+  group-detail <id>     Show full group detail with member articles
   health                Check service health
   help [command]        Show help
 
@@ -152,6 +155,62 @@ Returns status "ok" or "unavailable".
 
 Examples:
   classifier health
+EOF
+;;
+        group) cat <<'EOF'
+Usage: classifier group [options]
+
+Trigger the grouping pipeline for a given date. Groups classified articles
+by topic within each category and generates consolidated AI summaries.
+
+Options:
+  --date=YYYY-MM-DD     Target date (default: today)
+  --json                Raw JSON output
+
+Examples:
+  classifier group
+  classifier group --date=2026-05-07
+  classifier group --json
+EOF
+;;
+        groups) cat <<'EOF'
+Usage: classifier groups [options]
+
+List article groups with optional filtering and pagination.
+
+Filter options:
+  --category=<cat>      Filter by main tag category (e.g. Technology)
+  --date=YYYY-MM-DD     Filter by exact grouped date
+
+Pagination:
+  --page=<n>            Page number (default: 1)
+  --size=<n>            Page size, max 100 (default: 20)
+
+Output:
+  --json                Raw JSON output
+
+Examples:
+  classifier groups
+  classifier groups --category=Technology
+  classifier groups --date=2026-05-07
+  classifier groups --category=Politics --json
+EOF
+;;
+        group-detail) cat <<'EOF'
+Usage: classifier group-detail <id>
+
+Show full group details including the AI-generated combined article and
+a list of all member articles.
+
+Arguments:
+  <id>      Group ID (required)
+
+Output:
+  --json    Raw JSON output
+
+Examples:
+  classifier group-detail 42
+  classifier group-detail 42 --json
 EOF
 ;;
         *) usage_main ;;
@@ -246,6 +305,87 @@ cmd_articles() {
     fi
 }
 
+cmd_group() {
+    _date=""
+    for arg in "$@"; do
+        case "$arg" in
+            --date=*)   _date="${arg#--date=}" ;;
+            --json)     JSON_OUTPUT=1 ;;
+            --help|-h)  usage_cmd group; exit 0 ;;
+            -*)         die "Unknown flag: $arg" ;;
+        esac
+    done
+    _path="/api/groups/generate"
+    [ -n "$_date" ] && _path="${_path}?date=${_date}"
+    api_request POST "$_path"
+    if [ "$JSON_OUTPUT" = "1" ]; then out_json; else
+        out_fmt '"Groups created:   \(.groups_created)\nGroups updated:   \(.groups_updated)\nArticles grouped: \(.articles_grouped)\nDate:             \(.date)"'
+    fi
+}
+
+cmd_groups() {
+    _category=""; _date=""; _page=""; _size=""
+    for arg in "$@"; do
+        case "$arg" in
+            --category=*)   _category="${arg#--category=}" ;;
+            --date=*)        _date="${arg#--date=}" ;;
+            --page=*)        _page="${arg#--page=}" ;;
+            --size=*)        _size="${arg#--size=}" ;;
+            --json)          JSON_OUTPUT=1 ;;
+            --help|-h)       usage_cmd groups; exit 0 ;;
+            -*)              die "Unknown flag: $arg" ;;
+        esac
+    done
+
+    _qs=""
+    append_qs() { [ -n "$2" ] && _qs="${_qs}${_qs:+&}${1}=${2}"; }
+    append_qs "category"  "$_category"
+    append_qs "date"      "$_date"
+    append_qs "page"      "$_page"
+    append_qs "size"      "$_size"
+
+    _path="/api/groups"
+    [ -n "$_qs" ] && _path="${_path}?${_qs}"
+
+    api_request GET "$_path"
+
+    if [ "$JSON_OUTPUT" = "1" ]; then out_json; else
+        total=$(printf '%s' "$body" | jq -r '.total')
+        pages=$(printf '%s' "$body" | jq -r '.pages')
+        page=$(printf '%s' "$body" | jq -r '.page')
+        printf 'Groups (total: %s, page %s/%s)\n' "$total" "$page" "$pages"
+        printf '%s\n' "$body" | jq -r '
+            .items[] |
+            "  [#\(.id)] [\(.importance_score)/10] \(.title)\n" +
+            "    category: \(.category) | date: \(.grouped_date) | members: \(.member_count)"
+        ' 2>/dev/null
+    fi
+}
+
+cmd_group_detail() {
+    _id=""
+    for arg in "$@"; do
+        case "$arg" in
+            --json)     JSON_OUTPUT=1 ;;
+            --help|-h)  usage_cmd group-detail; exit 0 ;;
+            -*)         die "Unknown flag: $arg" ;;
+            *)          [ -z "$_id" ] && _id="$arg" ;;
+        esac
+    done
+    [ -z "$_id" ] && die "Usage: classifier group-detail <id>"
+    api_request GET "/api/groups/${_id}"
+    if [ "$JSON_OUTPUT" = "1" ]; then out_json; else
+        printf '%s\n' "$body" | jq -r '"Group #\(.id): \(.title)\nCategory: \(.category) | Date: \(.grouped_date) | Members: \(.member_count) | Score: \(.importance_score)/10\n\nSummary:\n\(.summary)"'
+        printf '\nMembers:\n'
+        printf '%s\n' "$body" | jq -r '
+            .members[] |
+            "  [\(.id)] \(.title // "(no title)")\n" +
+            "    author: \(.author // "unknown") | published: \(.published_at // "unknown")\n" +
+            "    url: \(.url // "N/A")"
+        ' 2>/dev/null
+    fi
+}
+
 cmd_health() {
     for arg in "$@"; do
         case "$arg" in
@@ -275,11 +415,14 @@ for arg in "$@"; do
 done
 
 case "$cmd" in
-    classify) eval "cmd_classify $args" ;;
-    status)   eval "cmd_status $args" ;;
-    articles) eval "cmd_articles $args" ;;
-    health)   eval "cmd_health $args" ;;
-    help)     eval "usage_cmd $args" ;;
-    "")       usage_main; exit 0 ;;
-    *)        die "Unknown command: $cmd. Run 'classifier help'." ;;
+    classify)     eval "cmd_classify $args" ;;
+    status)       eval "cmd_status $args" ;;
+    articles)     eval "cmd_articles $args" ;;
+    group)        eval "cmd_group $args" ;;
+    groups)       eval "cmd_groups $args" ;;
+    group-detail) eval "cmd_group_detail $args" ;;
+    health)       eval "cmd_health $args" ;;
+    help)         eval "usage_cmd $args" ;;
+    "")           usage_main; exit 0 ;;
+    *)            die "Unknown command: $cmd. Run 'classifier help'." ;;
 esac

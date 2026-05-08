@@ -130,8 +130,8 @@ This plan implements the article grouping feature as a post-classification pipel
 - [x] 7. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. CLI script extension
-  - [ ] 8.1 Add grouping commands to `article-classifier/scripts/classifier.sh`
+- [x] 8. CLI script extension
+  - [x] 8.1 Add grouping commands to `article-classifier/scripts/classifier.sh`
     - Add `group` command: POST /api/groups/generate (default today, --date=YYYY-MM-DD option)
     - Add `groups` command: GET /api/groups (--category option, --date option, --json flag)
     - Add `group-detail <id>` command: GET /api/groups/{id} (formatted output with member list)
