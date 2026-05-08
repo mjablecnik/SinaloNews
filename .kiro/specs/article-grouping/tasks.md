@@ -49,7 +49,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - _Requirements: 2.1, 2.2, 2.3, 2.5, 2.6, 2.7, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 10.1, 10.2, 10.5, 10.6_
 
 - [ ] 4. Grouping service (orchestration)
-  - [ ] 4.1 Implement grouping service in `article-classifier/src/grouping_service.py`
+  - [x] 4.1 Implement grouping service in `article-classifier/src/grouping_service.py`
     - Create `GroupingService` class
     - Implement `get_candidates(session, target_date)`: query articles with classification result + summary, not in article_group_members, published_at on target_date, grouped by first tag category
     - Implement `get_existing_groups(session, target_date)`: fetch existing groups for the date, grouped by category
