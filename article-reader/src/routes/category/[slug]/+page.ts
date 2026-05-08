@@ -1,38 +1,46 @@
 import type { PageLoad } from './$types';
-import { getAllArticles } from '$lib/api';
+import { getFeed } from '$lib/api';
 import { buildDateFrom } from '$lib/utils';
 import { get } from 'svelte/store';
 import { settings } from '$lib/stores/settings';
-import type { ArticleSummary } from '$lib/types';
-
-function sortArticles(articles: ArticleSummary[]): ArticleSummary[] {
-	return [...articles].sort((a, b) => {
-		const dateA = a.published_at ? new Date(a.published_at).toDateString() : '';
-		const dateB = b.published_at ? new Date(b.published_at).toDateString() : '';
-		if (dateA !== dateB) {
-			const timeA = a.published_at ? new Date(a.published_at).getTime() : 0;
-			const timeB = b.published_at ? new Date(b.published_at).getTime() : 0;
-			return timeB - timeA; // newest first
-		}
-		return b.importance_score - a.importance_score;
-	});
-}
+import type { FeedItem } from '$lib/types';
 
 export const load: PageLoad = async ({ params, depends }) => {
 	depends('app:category');
 	const s = get(settings);
 	const category = decodeURIComponent(params.slug);
 	try {
-		const articles = await getAllArticles({
+		const pageSize = 100;
+		const firstPage = await getFeed({
 			category,
 			min_score: s.minScore,
 			date_from: buildDateFrom(s.daysBack),
-			sort_by: 'published_at',
-			sort_order: 'desc'
+			page: 1,
+			size: pageSize
 		});
-		return { articles: sortArticles(articles), category, error: null };
+		const allItems: FeedItem[] = [...firstPage.items];
+		const totalPages = firstPage.pages;
+		if (totalPages > 1) {
+			const pagePromises = [];
+			for (let page = 2; page <= totalPages; page++) {
+				pagePromises.push(
+					getFeed({
+						category,
+						min_score: s.minScore,
+						date_from: buildDateFrom(s.daysBack),
+						page,
+						size: pageSize
+					})
+				);
+			}
+			const pages = await Promise.all(pagePromises);
+			for (const page of pages) {
+				allItems.push(...page.items);
+			}
+		}
+		return { items: allItems, category, error: null };
 	} catch (e) {
-		const error = e instanceof Error ? e.message : 'Failed to load articles';
-		return { articles: [] as ArticleSummary[], category, error };
+		const error = e instanceof Error ? e.message : 'Failed to load feed';
+		return { items: [] as FeedItem[], category, error };
 	}
 };

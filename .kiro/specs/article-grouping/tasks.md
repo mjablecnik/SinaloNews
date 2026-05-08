@@ -159,8 +159,8 @@ This plan implements the article grouping feature as a post-classification pipel
     - Display tags (union of member tags)
     - _Requirements: 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 11. Frontend feed integration
-  - [ ] 11.1 Update category page to use feed endpoint
+- [x] 11. Frontend feed integration
+  - [x] 11.1 Update category page to use feed endpoint
     - Modify `article-reader/src/routes/category/[slug]/+page.ts` to call `getFeed` instead of `getArticles`
     - Modify `article-reader/src/routes/category/[slug]/+page.svelte` to render `GroupCard` for type="group" items and `ArticleCard` for type="article" items
     - Standalone articles continue using existing ArticleCard component

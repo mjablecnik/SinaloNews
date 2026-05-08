@@ -15,7 +15,7 @@ import CategoryPage from '../../src/routes/+page.svelte';
 import ArticleListPage from '../../src/routes/category/[slug]/+page.svelte';
 import ArticleDetailPage from '../../src/routes/article/[id]/+page.svelte';
 import SettingsPage from '../../src/routes/settings/+page.svelte';
-import type { ArticleSummary, ArticleDetail } from '../../src/lib/types';
+import type { ArticleSummary, ArticleDetail, FeedItem } from '../../src/lib/types';
 
 function mockArticle(overrides: Partial<ArticleSummary> = {}): ArticleSummary {
 	return {
@@ -29,6 +29,24 @@ function mockArticle(overrides: Partial<ArticleSummary> = {}): ArticleSummary {
 		importance_score: 8,
 		summary: 'This is a test article summary.',
 		classified_at: '2024-06-01T12:00:00Z',
+		...overrides
+	};
+}
+
+function mockFeedItem(overrides: Partial<FeedItem> = {}): FeedItem {
+	return {
+		type: 'article',
+		id: 1,
+		title: 'Test Article',
+		url: 'https://example.com/article',
+		author: 'Test Author',
+		published_at: '2024-06-01T00:00:00Z',
+		tags: [{ category: 'Technology', subcategory: 'AI' }],
+		content_type: 'article',
+		importance_score: 8,
+		summary: 'This is a test article summary.',
+		classified_at: '2024-06-01T12:00:00Z',
+		category: 'Technology',
 		...overrides
 	};
 }
@@ -66,10 +84,10 @@ describe('navigation flow', () => {
 	});
 
 	it('Article List: clicking an article card navigates to article detail', async () => {
-		const article = mockArticle({ id: 42, summary: 'Summary of article 42.' });
+		const article = mockFeedItem({ id: 42, summary: 'Summary of article 42.' });
 
 		render(ArticleListPage, {
-			data: { category: 'Technology', articles: [article], error: null }
+			data: { category: 'Technology', items: [article], error: null }
 		});
 
 		const summaryEl = screen.getByText('Summary of article 42.');
@@ -89,7 +107,7 @@ describe('navigation flow', () => {
 
 	it('Article list: settings link points to /settings', () => {
 		render(ArticleListPage, {
-			data: { category: 'Technology', articles: [mockArticle()], error: null }
+			data: { category: 'Technology', items: [mockFeedItem()], error: null }
 		});
 
 		const settingsLink = screen.getByTitle('Settings');
@@ -143,7 +161,7 @@ describe('error handling', () => {
 
 	it('Article list API error shows error message', () => {
 		render(ArticleListPage, {
-			data: { category: 'Technology', articles: [], error: 'Failed to load articles' }
+			data: { category: 'Technology', items: [], error: 'Failed to load articles' }
 		});
 
 		expect(screen.getByText('Failed to load articles')).toBeTruthy();
@@ -151,7 +169,7 @@ describe('error handling', () => {
 
 	it('Article list: reload button calls invalidate and not a classification endpoint', async () => {
 		render(ArticleListPage, {
-			data: { category: 'Technology', articles: [mockArticle()], error: null }
+			data: { category: 'Technology', items: [mockFeedItem()], error: null }
 		});
 
 		const reloadBtn = screen.getByText('↻ Reload');
