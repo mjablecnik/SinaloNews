@@ -1,0 +1,96 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import type { FeedItem, Tag } from '$lib/types';
+
+	interface Props {
+		group: FeedItem;
+	}
+
+	let { group }: Props = $props();
+
+	function formatDate(dateStr: string | null | undefined): string {
+		if (!dateStr) return '';
+		return new Date(dateStr).toLocaleDateString(undefined, {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric'
+		});
+	}
+
+	function uniqueTags(tags: Tag[]): Tag[] {
+		const seen = new Set<string>();
+		return tags.filter((tag) => {
+			const key = `${tag.category}:${tag.subcategory}`;
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	}
+
+	function navigate() {
+		goto(`/group/${group.id}`);
+	}
+</script>
+
+<button
+	onclick={navigate}
+	class="relative flex w-full flex-col gap-2 rounded-lg border border-purple-200 bg-white p-4 text-left shadow-sm hover:shadow-md transition-all"
+>
+	<!-- Stacked card visual indicator -->
+	<span
+		class="absolute -bottom-1.5 left-2 right-2 h-full rounded-lg border border-purple-100 bg-purple-50 -z-10"
+	></span>
+	<span
+		class="absolute -bottom-3 left-4 right-4 h-full rounded-lg border border-purple-50 bg-purple-50 -z-20"
+	></span>
+
+	<div class="flex items-start gap-2">
+		<span class="mt-0.5 text-purple-500" title="Article group" aria-label="Article group">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-4 w-4 flex-shrink-0"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+				stroke-width="2"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+				/>
+			</svg>
+		</span>
+		<p class="text-sm font-semibold leading-snug text-gray-900">
+			{group.title ?? '(No title)'}
+		</p>
+	</div>
+
+	{#if group.summary}
+		<p class="text-sm leading-relaxed text-gray-700 line-clamp-3">{group.summary}</p>
+	{/if}
+
+	<div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+		{#if group.grouped_date}
+			<span>{formatDate(group.grouped_date)}</span>
+		{/if}
+		<span class="rounded bg-purple-100 px-1.5 py-0.5 font-medium text-purple-700">
+			{group.importance_score}/10
+		</span>
+		{#if group.member_count}
+			<span class="rounded bg-gray-100 px-1.5 py-0.5 text-gray-600">
+				{group.member_count} articles
+			</span>
+		{/if}
+	</div>
+
+	{#if group.tags && group.tags.length > 0}
+		<div class="flex flex-wrap gap-1">
+			{#each uniqueTags(group.tags).slice(0, 5) as tag}
+				<span class="rounded-full bg-purple-50 px-2 py-0.5 text-xs text-purple-600">
+					{tag.subcategory || tag.category}
+				</span>
+			{/each}
+		</div>
+	{/if}
+</button>

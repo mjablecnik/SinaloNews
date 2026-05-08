@@ -151,8 +151,8 @@ This plan implements the article grouping feature as a post-classification pipel
     - Add `getGroupDetail(id)` function calling GET /api/groups/{id}
     - _Requirements: 8.1, 9.1_
 
-- [ ] 10. Frontend GroupCard component
-  - [ ] 10.1 Create `article-reader/src/lib/components/GroupCard.svelte`
+- [x] 10. Frontend GroupCard component
+  - [x] 10.1 Create `article-reader/src/lib/components/GroupCard.svelte`
     - Display group title, short summary, member_count, grouped_date, importance_score
     - Visual indicator distinguishing it from ArticleCard (stacked card appearance or group icon)
     - Link to group detail page `/group/{id}`
