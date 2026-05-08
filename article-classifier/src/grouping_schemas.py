@@ -141,6 +141,14 @@ class FeedResponse(BaseModel):
     pages: int
 
 
+class GroupListResponse(BaseModel):
+    items: list[GroupSummaryResponse]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+
 class GroupingTriggerResponse(BaseModel):
     groups_created: int
     groups_updated: int

@@ -3,7 +3,7 @@ import hashlib
 import json
 import math
 import time
-from datetime import datetime
+from datetime import date, datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -15,7 +15,17 @@ from sqlalchemy.orm import selectinload
 from src.classifier_service import ClassifierService, is_processing, trigger_classification
 from src.config import settings
 from src.database import get_session, AsyncSessionFactory
-from src.models import Article, ArticleTag, ClassificationResult, Tag
+from src.grouping_schemas import (
+    FeedItem,
+    FeedResponse,
+    GroupDetailResponse,
+    GroupListResponse,
+    GroupMemberResponse,
+    GroupSummaryResponse,
+    GroupingTriggerResponse,
+)
+from src.grouping_service import GroupingService
+from src.models import Article, ArticleGroup, ArticleGroupMember, ArticleTag, ClassificationResult, Tag
 from src.schemas import (
     ArticleDetailResponse,
     ClassifiedArticleResponse,
@@ -31,6 +41,7 @@ router = APIRouter()
 
 _classifier_service: ClassifierService | None = None
 _formatting_llm: ChatOpenAI | None = None
+_grouping_service: GroupingService | None = None
 
 # --- In-memory cache (1 hour TTL) ---
 _CACHE_TTL_SECONDS = 3600  # 1 hour
@@ -124,6 +135,13 @@ def get_classifier_service() -> ClassifierService:
     return _classifier_service
 
 
+def get_grouping_service() -> GroupingService:
+    global _grouping_service
+    if _grouping_service is None:
+        _grouping_service = GroupingService()
+    return _grouping_service
+
+
 def _build_tag_responses(article_tags: list[ArticleTag]) -> list[TagResponse]:
     tags = []
     for at in article_tags:
@@ -134,6 +152,113 @@ def _build_tag_responses(article_tags: list[ArticleTag]) -> list[TagResponse]:
         if parent:
             tags.append(TagResponse(category=parent.name, subcategory=tag.name))
     return tags
+
+
+def _build_group_tags(members: list[ArticleGroupMember]) -> list[TagResponse]:
+    seen: set[tuple[str, str]] = set()
+    tags: list[TagResponse] = []
+    for member in members:
+        article = member.article
+        if not article or not article.classification_result:
+            continue
+        for at in article.classification_result.article_tags:
+            tag = at.tag
+            if tag.parent_id is None or not tag.parent:
+                continue
+            pair = (tag.parent.name, tag.name)
+            if pair not in seen:
+                seen.add(pair)
+                tags.append(TagResponse(category=tag.parent.name, subcategory=tag.name))
+    return tags
+
+
+def _compute_group_importance(members: list[ArticleGroupMember]) -> int:
+    scores = [
+        m.article.classification_result.importance_score
+        for m in members
+        if m.article and m.article.classification_result
+    ]
+    return max(scores) if scores else 0
+
+
+def _group_has_subcategory(members: list[ArticleGroupMember], subcategory: str) -> bool:
+    sub_lower = subcategory.lower()
+    for member in members:
+        article = member.article
+        if not article or not article.classification_result:
+            continue
+        for at in article.classification_result.article_tags:
+            if at.tag and at.tag.name.lower() == sub_lower and at.tag.parent_id is not None:
+                return True
+    return False
+
+
+def _get_article_category(article_tags: list[ArticleTag]) -> str:
+    if not article_tags:
+        return ""
+    first_at = min(article_tags, key=lambda at: at.id)
+    tag = first_at.tag
+    if tag and tag.parent:
+        return tag.parent.name
+    if tag:
+        return tag.name
+    return ""
+
+
+def _group_to_summary(group: ArticleGroup) -> GroupSummaryResponse:
+    members = group.members
+    return GroupSummaryResponse(
+        id=group.id,
+        title=group.title,
+        summary=group.summary,
+        category=group.category,
+        grouped_date=group.grouped_date,
+        member_count=len(members),
+        importance_score=_compute_group_importance(members),
+        tags=_build_group_tags(members),
+        created_at=group.created_at,
+    )
+
+
+def _group_to_feed_item(group: ArticleGroup) -> FeedItem:
+    members = group.members
+    return FeedItem(
+        type="group",
+        id=group.id,
+        title=group.title,
+        summary=group.summary,
+        category=group.category,
+        importance_score=_compute_group_importance(members),
+        tags=_build_group_tags(members),
+        grouped_date=group.grouped_date,
+        member_count=len(members),
+    )
+
+
+def _cr_to_feed_item(cr: ClassificationResult) -> FeedItem:
+    article = cr.article
+    return FeedItem(
+        type="article",
+        id=article.id,
+        title=article.title,
+        summary=cr.summary,
+        category=_get_article_category(cr.article_tags),
+        importance_score=cr.importance_score,
+        tags=_build_tag_responses(cr.article_tags),
+        url=article.url,
+        author=article.author,
+        published_at=article.published_at,
+        content_type=cr.content_type,
+        classified_at=cr.classified_at,
+    )
+
+
+def _feed_date_key(item: FeedItem) -> datetime:
+    if item.type == "article":
+        return item.published_at or datetime.min
+    if item.grouped_date:
+        return datetime(item.grouped_date.year, item.grouped_date.month, item.grouped_date.day)
+    return datetime.min
 
 
 @router.get("/api/articles", response_model=PaginatedResponse)
@@ -312,6 +437,191 @@ async def classify_status(
     pending = await service.count_unprocessed()
     classified = await service.count_classified()
     return ClassifyStatusResponse(status=status, pending=pending, classified=classified)
+
+
+_GROUP_MEMBER_LOAD_OPTIONS = (
+    selectinload(ArticleGroup.members)
+    .selectinload(ArticleGroupMember.article)
+    .selectinload(Article.classification_result)
+    .selectinload(ClassificationResult.article_tags)
+    .selectinload(ArticleTag.tag)
+    .selectinload(Tag.parent)
+)
+
+
+@router.post("/api/groups/generate", response_model=GroupingTriggerResponse)
+async def generate_groups(
+    target_date: date | None = Query(None, alias="date"),
+    service: GroupingService = Depends(get_grouping_service),
+) -> GroupingTriggerResponse:
+    return await service.run_grouping(target_date=target_date)
+
+
+@router.get("/api/groups", response_model=GroupListResponse)
+async def get_groups(
+    category: str | None = Query(None),
+    date_filter: date | None = Query(None, alias="date"),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_session),
+) -> GroupListResponse:
+    filters = []
+    if category is not None:
+        filters.append(ArticleGroup.category.ilike(category))
+    if date_filter is not None:
+        filters.append(ArticleGroup.grouped_date == date_filter)
+    if date_from is not None:
+        filters.append(ArticleGroup.grouped_date >= date_from)
+    if date_to is not None:
+        filters.append(ArticleGroup.grouped_date <= date_to)
+
+    base_stmt = select(ArticleGroup)
+    if filters:
+        base_stmt = base_stmt.where(and_(*filters))
+
+    count_stmt = select(func.count()).select_from(base_stmt.subquery())
+    total: int = (await session.execute(count_stmt)).scalar() or 0
+
+    stmt = (
+        base_stmt
+        .order_by(ArticleGroup.grouped_date.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .options(_GROUP_MEMBER_LOAD_OPTIONS)
+    )
+    rows = (await session.execute(stmt)).scalars().all()
+
+    items = [_group_to_summary(g) for g in rows]
+    pages = math.ceil(total / size) if total > 0 else 0
+    return GroupListResponse(items=items, total=total, page=page, size=size, pages=pages)
+
+
+@router.get("/api/groups/{group_id}", response_model=GroupDetailResponse)
+async def get_group_detail(
+    group_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> GroupDetailResponse:
+    stmt = (
+        select(ArticleGroup)
+        .where(ArticleGroup.id == group_id)
+        .options(_GROUP_MEMBER_LOAD_OPTIONS)
+    )
+    group = (await session.execute(stmt)).scalar_one_or_none()
+    if group is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    members = group.members
+    member_responses = [
+        GroupMemberResponse(
+            id=m.article.id,
+            title=m.article.title,
+            url=m.article.url,
+            author=m.article.author,
+            published_at=m.article.published_at,
+            summary=m.article.classification_result.summary if m.article.classification_result else None,
+            importance_score=m.article.classification_result.importance_score if m.article.classification_result else 0,
+        )
+        for m in members
+        if m.article
+    ]
+
+    return GroupDetailResponse(
+        id=group.id,
+        title=group.title,
+        summary=group.summary,
+        detail=group.detail,
+        category=group.category,
+        grouped_date=group.grouped_date,
+        member_count=len(members),
+        importance_score=_compute_group_importance(members),
+        tags=_build_group_tags(members),
+        created_at=group.created_at,
+        members=member_responses,
+    )
+
+
+@router.get("/api/feed", response_model=FeedResponse)
+async def get_feed(
+    category: str | None = Query(None),
+    subcategory: str | None = Query(None),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    min_score: int | None = Query(None, ge=0, le=10),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_session),
+) -> FeedResponse:
+    # --- Standalone articles (not in any group) ---
+    article_stmt = (
+        select(ClassificationResult)
+        .join(Article, ClassificationResult.article_id == Article.id)
+        .outerjoin(ArticleGroupMember, ArticleGroupMember.article_id == Article.id)
+        .where(ArticleGroupMember.id.is_(None))
+        .options(
+            selectinload(ClassificationResult.article),
+            selectinload(ClassificationResult.article_tags)
+            .selectinload(ArticleTag.tag)
+            .selectinload(Tag.parent),
+        )
+    )
+
+    article_filters = []
+    if min_score is not None:
+        article_filters.append(ClassificationResult.importance_score >= min_score)
+    if date_from is not None:
+        article_filters.append(func.date(Article.published_at) >= date_from)
+    if date_to is not None:
+        article_filters.append(func.date(Article.published_at) <= date_to)
+
+    if category is not None or subcategory is not None:
+        tag_filter_stmt = select(ArticleTag.classification_result_id)
+        if category is not None:
+            parent_tag = select(Tag.id).where(Tag.name.ilike(category), Tag.parent_id.is_(None))
+            child_tags = select(Tag.id).where(Tag.parent_id.in_(parent_tag))
+            if subcategory is not None:
+                child_tags = child_tags.where(Tag.name.ilike(subcategory))
+            tag_filter_stmt = tag_filter_stmt.where(ArticleTag.tag_id.in_(child_tags))
+        else:
+            sub_tag = select(Tag.id).where(Tag.name.ilike(subcategory))
+            tag_filter_stmt = tag_filter_stmt.where(ArticleTag.tag_id.in_(sub_tag))
+        article_filters.append(ClassificationResult.id.in_(tag_filter_stmt))
+
+    if article_filters:
+        article_stmt = article_stmt.where(and_(*article_filters))
+
+    article_rows = (await session.execute(article_stmt)).scalars().all()
+
+    # --- Groups ---
+    group_stmt = select(ArticleGroup).options(_GROUP_MEMBER_LOAD_OPTIONS)
+
+    group_filters = []
+    if category is not None:
+        group_filters.append(ArticleGroup.category.ilike(category))
+    if date_from is not None:
+        group_filters.append(ArticleGroup.grouped_date >= date_from)
+    if date_to is not None:
+        group_filters.append(ArticleGroup.grouped_date <= date_to)
+
+    if group_filters:
+        group_stmt = group_stmt.where(and_(*group_filters))
+
+    group_rows = list((await session.execute(group_stmt)).scalars().all())
+
+    if min_score is not None:
+        group_rows = [g for g in group_rows if _compute_group_importance(g.members) >= min_score]
+    if subcategory is not None:
+        group_rows = [g for g in group_rows if _group_has_subcategory(g.members, subcategory)]
+
+    # Merge and sort by date ascending
+    all_items = [_cr_to_feed_item(cr) for cr in article_rows] + [_group_to_feed_item(g) for g in group_rows]
+    all_items.sort(key=_feed_date_key)
+
+    total = len(all_items)
+    pages = math.ceil(total / size) if total > 0 else 0
+    offset = (page - 1) * size
+    return FeedResponse(items=all_items[offset:offset + size], total=total, page=page, size=size, pages=pages)
 
 
 @router.get("/health", response_model=HealthResponse)
