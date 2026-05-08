@@ -77,7 +77,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Assert clustering is only invoked for categories meeting the threshold
     - **Validates: Requirements 1.5**
 
-  - [ ]* 4.5 Write property test: Clustering output validation (Property 4)
+  - [x]* 4.5 Write property test: Clustering output validation (Property 4)
     - **Property 4: Clustering output validation**
     - Generate random clustering LLM responses with edge cases (single-article groups, duplicate IDs)
     - Assert validation discards single-article groups and deduplicates assignments

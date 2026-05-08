@@ -99,10 +99,12 @@ class GroupingService:
         valid_groups: list[ClusterItem] = []
 
         for cluster in output.groups:
-            filtered_ids = [
-                aid for aid in cluster.article_ids
-                if aid in valid_article_ids and aid not in seen
-            ]
+            local_seen: set[int] = set()
+            filtered_ids = []
+            for aid in cluster.article_ids:
+                if aid in valid_article_ids and aid not in seen and aid not in local_seen:
+                    filtered_ids.append(aid)
+                    local_seen.add(aid)
             if len(filtered_ids) < 2:
                 log.warning(
                     "grouping_cluster_discarded",
@@ -120,10 +122,12 @@ class GroupingService:
 
         valid_additions: list[ExistingGroupAddition] = []
         for addition in output.existing_group_additions:
-            filtered_ids = [
-                aid for aid in addition.article_ids
-                if aid in valid_article_ids and aid not in seen
-            ]
+            local_seen = set()
+            filtered_ids = []
+            for aid in addition.article_ids:
+                if aid in valid_article_ids and aid not in seen and aid not in local_seen:
+                    filtered_ids.append(aid)
+                    local_seen.add(aid)
             if not filtered_ids:
                 continue
             seen.update(filtered_ids)
