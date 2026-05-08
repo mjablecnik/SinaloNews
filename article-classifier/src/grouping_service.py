@@ -40,6 +40,7 @@ class GroupingService:
                 func.date(Article.published_at) == target_date,
                 ClassificationResult.summary.is_not(None),
                 ClassificationResult.summary != "",
+                ClassificationResult.importance_score >= settings.GROUPING_MIN_SCORE,
                 ArticleGroupMember.id.is_(None),
             )
             .options(

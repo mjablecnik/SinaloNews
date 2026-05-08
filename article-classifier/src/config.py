@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     GROUPING_LLM_MODEL: str | None = None
     GROUPING_MIN_ARTICLES: int = 2
     GROUPING_MAX_ARTICLES_PER_CATEGORY: int = 50
+    GROUPING_MIN_SCORE: int = 0  # Only group articles with importance_score >= this value
 
 
 settings = Settings()
