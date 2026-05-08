@@ -267,8 +267,8 @@ async def get_articles(
     subcategory: str | None = Query(None),
     content_type: str | None = Query(None),
     min_score: int | None = Query(None, ge=0, le=10),
-    date_from: datetime | None = Query(None),
-    date_to: datetime | None = Query(None),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
     sort_by: str = Query("classified_at", pattern="^(importance_score|published_at|classified_at)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     page: int = Query(1, ge=1),
@@ -302,9 +302,9 @@ async def get_articles(
     if min_score is not None:
         filters.append(ClassificationResult.importance_score >= min_score)
     if date_from is not None:
-        filters.append(Article.published_at >= date_from)
+        filters.append(func.date(Article.published_at) >= date_from)
     if date_to is not None:
-        filters.append(Article.published_at <= date_to)
+        filters.append(func.date(Article.published_at) <= date_to)
 
     if category is not None or subcategory is not None:
         tag_filter_stmt = select(ArticleTag.classification_result_id)
