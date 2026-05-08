@@ -86,7 +86,7 @@ def _get_formatting_llm() -> ChatOpenAI:
     return _formatting_llm
 
 
-_FORMAT_PROMPT = """You are a text formatter for a news reader application.
+_FORMAT_PROMPT = """You are a text formatter and translator for a news reader application.
 Take the following raw article text and reformat it into clean, readable Markdown.
 
 Rules:
@@ -95,7 +95,8 @@ Rules:
 - Use bullet points where appropriate (e.g., lists of items)
 - Remove any image URLs, base64 data, encoded strings, or garbage characters
 - Remove any emoji sequences that don't add meaning
-- Keep the content in its original language (do not translate)
+- If the text is NOT in Czech, translate it to Czech while preserving all facts and meaning
+- If the text is already in Czech, keep it in Czech (do not translate)
 - Do NOT add any information that is not in the original text
 - Do NOT add a title or heading — just the formatted body text
 - Output ONLY the formatted Markdown text, nothing else"""
