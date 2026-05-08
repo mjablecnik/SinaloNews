@@ -33,7 +33,7 @@ echo "App name: ${APP_NAME}"
 TOML_KEYS=$(awk '/^\[env\]/{found=1; next} found && /^\[/{found=0} found && /=/{gsub(/[ \t]*=.*/, ""); print}' "$FLY_TOML")
 
 # Create app if it doesn't exist
-if ! fly apps list 2>/dev/null | grep -q "^${APP_NAME}"; then
+if ! fly apps list 2>/dev/null | grep -qw "${APP_NAME}"; then
     echo "Creating app ${APP_NAME}..."
     fly apps create "$APP_NAME"
 else
