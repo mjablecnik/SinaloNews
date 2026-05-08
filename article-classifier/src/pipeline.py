@@ -1,6 +1,7 @@
 import asyncio
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import structlog
 from langchain_openai import ChatOpenAI
@@ -36,7 +37,9 @@ class _PipelineState(TypedDict):
 _SYSTEM_PROMPT = (
     "You are an article classifier for a Czech news aggregator. "
     "Analyze the provided article and return a structured JSON classification "
-    "with tags, content_type, score, reason, and summary."
+    "with tags, content_type, score, reason, and summary. "
+    "Use the provided current date and time to correctly infer any ambiguous or missing dates "
+    "(e.g. missing year, relative references like 'yesterday' or 'next Monday')."
 )
 
 _CONTENT_TYPES_DOC = """Available content types:
@@ -91,7 +94,9 @@ def _build_user_prompt(
     article_summary: str | None,
     existing_tags: list[dict],
 ) -> str:
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     sections = [
+        f"Current date and time: {now}",
         f"Title: {article_title}",
         f"Article text:\n{article_text}",
     ]
