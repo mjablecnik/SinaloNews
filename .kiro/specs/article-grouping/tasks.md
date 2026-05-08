@@ -83,7 +83,7 @@ This plan implements the article grouping feature as a post-classification pipel
     - Assert validation discards single-article groups and deduplicates assignments
     - **Validates: Requirements 2.8, 2.9**
 
-  - [ ]* 4.6 Write property test: Max articles per category truncation (Property 9)
+  - [x]* 4.6 Write property test: Max articles per category truncation (Property 9)
     - **Property 9: Max articles per category truncation**
     - Generate random candidate lists of varying sizes with a max limit
     - Assert only the most recent articles up to the limit are passed to clustering

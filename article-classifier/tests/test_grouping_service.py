@@ -112,6 +112,28 @@ def _apply_threshold_filter(
     return result
 
 
+def _truncate_to_most_recent(
+    articles: list[_FakeArticle],
+    max_articles: int,
+) -> list[_FakeArticle]:
+    """Mirrors the per-category truncation in GroupingService.run_grouping().
+
+    The DB query returns articles sorted by published_at DESC (most recent first).
+    This helper replicates that sort + slice so property tests can verify correctness
+    independent of the DB ordering.
+
+    Articles without published_at are placed after dated ones (treated as oldest).
+    """
+    dated = sorted(
+        [a for a in articles if a.published_at is not None],
+        key=lambda a: a.published_at,
+        reverse=True,
+    )
+    undated = [a for a in articles if a.published_at is None]
+    ordered = dated + undated
+    return ordered[:max_articles]
+
+
 # ---------------------------------------------------------------------------
 # Hypothesis strategies
 # ---------------------------------------------------------------------------
@@ -409,4 +431,117 @@ def test_threshold_preserves_article_content(partitioned, min_articles, max_arti
         expected = original[:max_articles] if len(original) > max_articles else original
         assert [a.id for a in articles] == [a.id for a in expected], (
             f"Category '{category}' articles were modified unexpectedly"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Feature: article-grouping, Property 9: Max articles per category truncation
+# ---------------------------------------------------------------------------
+
+_articles_with_dates_strategy = st.lists(
+    st.integers(min_value=1, max_value=200).flatmap(
+        lambda aid: st.builds(
+            _FakeArticle,
+            id=st.just(aid),
+            published_at=st.one_of(
+                st.none(),
+                st.datetimes(
+                    min_value=datetime(2026, 1, 1, 0, 0, 0),
+                    max_value=datetime(2026, 12, 31, 23, 59, 59),
+                ),
+            ),
+            classification=_classification_strategy,
+            is_grouped=st.booleans(),
+        )
+    ),
+    min_size=0,
+    max_size=60,
+)
+
+_max_limit_strategy = st.integers(min_value=1, max_value=50)
+
+
+@given(_articles_with_dates_strategy, _max_limit_strategy)
+@h_settings(max_examples=100)
+def test_truncation_count_never_exceeds_limit(articles, max_articles):
+    """Property 9 (count bound): truncated list never exceeds max_articles.
+
+    For any candidate list and any limit, the result must contain at most
+    max_articles articles — never more.
+
+    Validates: Requirements 11.5
+    """
+    result = _truncate_to_most_recent(articles, max_articles)
+    assert len(result) <= max_articles, (
+        f"Truncated list has {len(result)} articles but limit is {max_articles}"
+    )
+
+
+@given(_articles_with_dates_strategy, _max_limit_strategy)
+@h_settings(max_examples=100)
+def test_truncation_returns_all_when_below_limit(articles, max_articles):
+    """Property 9 (no-op below limit): when count <= max, all articles are returned.
+
+    If the input has at most max_articles items, nothing should be dropped.
+
+    Validates: Requirements 11.5
+    """
+    if len(articles) > max_articles:
+        return  # only test the below-limit case
+
+    result = _truncate_to_most_recent(articles, max_articles)
+    assert len(result) == len(articles), (
+        f"Expected all {len(articles)} articles but got {len(result)}"
+    )
+    assert {a.id for a in result} == {a.id for a in articles}, (
+        "Wrong articles returned when input is below limit"
+    )
+
+
+@given(_articles_with_dates_strategy, _max_limit_strategy)
+@h_settings(max_examples=100)
+def test_truncation_excluded_articles_are_oldest(articles, max_articles):
+    """Property 9 (recency): articles kept are always more recent than those dropped.
+
+    When truncation occurs, every kept article with a published_at must be at least
+    as recent as every excluded article with a published_at.
+
+    Validates: Requirements 11.5
+    """
+    if len(articles) <= max_articles:
+        return  # truncation only matters when over the limit
+
+    result = _truncate_to_most_recent(articles, max_articles)
+    result_ids = {a.id for a in result}
+    excluded = [a for a in articles if a.id not in result_ids]
+
+    kept_dates = [a.published_at for a in result if a.published_at is not None]
+    excluded_dates = [a.published_at for a in excluded if a.published_at is not None]
+
+    if not kept_dates or not excluded_dates:
+        return  # can't compare without dates on both sides
+
+    min_kept = min(kept_dates)
+    max_excluded = max(excluded_dates)
+    assert min_kept >= max_excluded, (
+        f"Kept article with published_at={min_kept} is older than "
+        f"excluded article with published_at={max_excluded}"
+    )
+
+
+@given(_articles_with_dates_strategy, _max_limit_strategy)
+@h_settings(max_examples=100)
+def test_truncation_result_is_subset_of_input(articles, max_articles):
+    """Property 9 (subset): every returned article was in the original input.
+
+    Truncation must not fabricate new articles or change article identity.
+
+    Validates: Requirements 11.5
+    """
+    result = _truncate_to_most_recent(articles, max_articles)
+    input_ids = {a.id for a in articles}
+
+    for article in result:
+        assert article.id in input_ids, (
+            f"Article id={article.id} in result was not in the original input"
         )
