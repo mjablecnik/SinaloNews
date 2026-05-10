@@ -1,4 +1,4 @@
-import type { ArticleSummary, CategoryCount } from './types';
+import type { ArticleSummary, CategoryCount, FeedItem } from './types';
 
 export function extractCategories(articles: ArticleSummary[]): CategoryCount[] {
 	const counts = new Map<string, number>();
@@ -66,4 +66,65 @@ export function formatExtractedText(text: string): string {
 	const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim().length > 0);
 	// Within each paragraph, collapse single newlines to spaces
 	return paragraphs.map((p) => p.replace(/\n/g, ' ').trim()).join('\n\n');
+}
+
+export function formatDateTime(dateStr: string | null): string {
+	if (!dateStr) return '';
+	const date = new Date(dateStr);
+	return (
+		date.toLocaleDateString(undefined, {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric'
+		}) +
+		' ' +
+		date.toLocaleTimeString(undefined, {
+			hour: '2-digit',
+			minute: '2-digit'
+		})
+	);
+}
+
+export function formatDateOnly(dateStr: string): string {
+	return new Date(dateStr).toISOString().split('T')[0];
+}
+
+export function extractUniqueDates(items: FeedItem[]): string[] {
+	const dates = new Set<string>();
+	for (const item of items) {
+		const dateStr = item.published_at ?? item.grouped_date;
+		if (dateStr) {
+			dates.add(formatDateOnly(dateStr));
+		}
+	}
+	return Array.from(dates).sort().reverse();
+}
+
+export function getTodayDateString(): string {
+	return new Date().toISOString().split('T')[0];
+}
+
+export function sortByDateThenImportance(items: FeedItem[]): FeedItem[] {
+	return [...items].sort((a, b) => {
+		const dateA = a.published_at ?? a.grouped_date ?? '';
+		const dateB = b.published_at ?? b.grouped_date ?? '';
+		const dateCmp = dateB.localeCompare(dateA);
+		if (dateCmp !== 0) return dateCmp;
+		return b.importance_score - a.importance_score;
+	});
+}
+
+export function filterReadItems(
+	items: FeedItem[],
+	readArticleIds: number[],
+	readGroupIds: number[],
+	sessionReadSet: Set<string>
+): FeedItem[] {
+	return items.filter((item) => {
+		const key = `${item.type}:${item.id}`;
+		if (sessionReadSet.has(key)) return true;
+		if (item.type === 'article' && readArticleIds.includes(item.id)) return false;
+		if (item.type === 'group' && readGroupIds.includes(item.id)) return false;
+		return true;
+	});
 }

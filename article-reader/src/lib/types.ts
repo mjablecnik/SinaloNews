@@ -92,3 +92,8 @@ export interface FeedResponse {
 	size: number;
 	pages: number;
 }
+
+export interface SavedItems {
+	articles: number[];
+	groups: number[];
+}
