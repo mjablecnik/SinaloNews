@@ -104,6 +104,10 @@ export function getTodayDateString(): string {
 	return new Date().toISOString().split('T')[0];
 }
 
+export function sortByImportance(items: FeedItem[]): FeedItem[] {
+	return [...items].sort((a, b) => b.importance_score - a.importance_score);
+}
+
 export function sortByDateThenImportance(items: FeedItem[]): FeedItem[] {
 	return [...items].sort((a, b) => {
 		const dateA = a.published_at ?? a.grouped_date ?? '';
