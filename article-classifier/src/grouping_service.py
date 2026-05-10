@@ -97,17 +97,17 @@ class GroupingService:
         output: ClusteringOutput,
         valid_article_ids: set[int],
     ) -> ClusteringOutput:
-        """Discard single-article groups and deduplicate article assignments across groups."""
-        seen: set[int] = set()
+        """Discard single-article groups and filter out invalid IDs.
+
+        Does NOT deduplicate across groups — the same article can appear in
+        multiple clusters. The validation step will resolve overlaps later.
+        """
         valid_groups: list[ClusterItem] = []
 
         for cluster in output.groups:
-            local_seen: set[int] = set()
-            filtered_ids = []
-            for aid in cluster.article_ids:
-                if aid in valid_article_ids and aid not in seen and aid not in local_seen:
-                    filtered_ids.append(aid)
-                    local_seen.add(aid)
+            filtered_ids = [aid for aid in cluster.article_ids if aid in valid_article_ids]
+            # Remove duplicates within the same cluster
+            filtered_ids = list(dict.fromkeys(filtered_ids))
             if len(filtered_ids) < 2:
                 log.warning(
                     "grouping_cluster_discarded",
@@ -116,7 +116,6 @@ class GroupingService:
                     topic=cluster.topic[:60] if cluster.topic else "",
                 )
                 continue
-            seen.update(filtered_ids)
             valid_groups.append(ClusterItem(
                 article_ids=filtered_ids,
                 topic=cluster.topic,
@@ -125,15 +124,10 @@ class GroupingService:
 
         valid_additions: list[ExistingGroupAddition] = []
         for addition in output.existing_group_additions:
-            local_seen = set()
-            filtered_ids = []
-            for aid in addition.article_ids:
-                if aid in valid_article_ids and aid not in seen and aid not in local_seen:
-                    filtered_ids.append(aid)
-                    local_seen.add(aid)
+            filtered_ids = [aid for aid in addition.article_ids if aid in valid_article_ids]
+            filtered_ids = list(dict.fromkeys(filtered_ids))
             if not filtered_ids:
                 continue
-            seen.update(filtered_ids)
             valid_additions.append(ExistingGroupAddition(
                 group_id=addition.group_id,
                 article_ids=filtered_ids,
