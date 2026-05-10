@@ -493,7 +493,7 @@ async def get_groups(
 
     stmt = (
         base_stmt
-        .order_by(ArticleGroup.grouped_date.desc())
+        .order_by(ArticleGroup.id.asc())
         .offset((page - 1) * size)
         .limit(size)
         .options(_GROUP_MEMBER_LOAD_OPTIONS)
