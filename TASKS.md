@@ -4,7 +4,7 @@
 - [x] 2. [HIGH] Update `filteredItems` in `src/routes/category/[slug]/+page.svelte` to sort by importance (not date-then-importance) when `isAllInOne` is true
 - [x] 3. [HIGH] Replace `SubcategoryFilter` with `DateFilter` in category pages — remove subcategory filtering logic, add date filtering with `selectedDate` defaulting to today
 - [x] 4. [HIGH] Update `filteredItems` derived for non-"All in One" categories to filter by selected date instead of subcategory
-- [ ] 5. [MEDIUM] Update `CategoryCard.svelte` to accept a `color` prop (gradient classes or style) and render with colored background instead of white
+- [x] 5. [MEDIUM] Update `CategoryCard.svelte` to accept a `color` prop (gradient classes or style) and render with colored background instead of white
 - [ ] 6. [MEDIUM] Create a deterministic color assignment utility (hash category name → palette index) in `src/lib/utils.ts`
 - [ ] 7. [MEDIUM] Update `src/routes/+page.svelte` to pass a color to each `CategoryCard` based on category name
 - [ ] 8. [MEDIUM] Modify `CategoryCard.svelte` to show only unread count (remove "read" and "total" display)
