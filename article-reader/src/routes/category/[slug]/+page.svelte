@@ -6,7 +6,6 @@
 	import { sessionReadSet } from '$lib/stores/sessionReadSet';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
 	import GroupCard from '$lib/components/GroupCard.svelte';
-	import SubcategoryFilter from '$lib/components/SubcategoryFilter.svelte';
 	import DateFilter from '$lib/components/DateFilter.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import { extractUniqueDates, getTodayDateString, sortByImportance, formatDateOnly, filterReadItems } from '$lib/utils';
@@ -16,20 +15,7 @@
 
 	const isAllInOne = $derived(data.category === '__all__');
 
-	let selectedSubcategory = $state<string | null>(null);
 	let selectedDate = $state<string | null>(getTodayDateString());
-
-	let subcategories = $derived.by(() => {
-		const seen = new Set<string>();
-		for (const item of data.items) {
-			for (const tag of item.tags) {
-				if (tag.category === data.category && tag.subcategory) {
-					seen.add(tag.subcategory);
-				}
-			}
-		}
-		return Array.from(seen);
-	});
 
 	let dates = $derived(extractUniqueDates(data.items));
 
@@ -45,13 +31,12 @@
 				return formatDateOnly(dateStr) === selectedDate;
 			});
 		}
-		return selectedSubcategory
-			? visibleItems.filter((item) =>
-					item.tags.some(
-						(t) => t.category === data.category && t.subcategory === selectedSubcategory
-					)
-				)
-			: visibleItems;
+		if (!selectedDate) return visibleItems;
+		return visibleItems.filter((item) => {
+			const dateStr = item.published_at ?? item.grouped_date;
+			if (!dateStr) return false;
+			return formatDateOnly(dateStr) === selectedDate;
+		});
 	});
 
 	beforeNavigate(({ to }) => {
@@ -89,25 +74,15 @@
 	{#if data.error}
 		<ErrorMessage message={data.error} onRetry={() => location.reload()} />
 	{:else}
-		{#if isAllInOne}
-			{#if dates.length > 0}
-				<div class="mb-4">
-					<DateFilter {dates} selected={selectedDate} onSelect={(d) => { selectedDate = d; }} />
-				</div>
-			{/if}
-		{:else if subcategories.length > 0}
+		{#if dates.length > 0}
 			<div class="mb-4">
-				<SubcategoryFilter
-					{subcategories}
-					selected={selectedSubcategory}
-					onSelect={(s) => { selectedSubcategory = s; }}
-				/>
+				<DateFilter {dates} selected={selectedDate} onSelect={(d) => { selectedDate = d; }} />
 			</div>
 		{/if}
 
 		{#if filteredItems.length === 0}
 			<p class="py-12 text-center text-gray-500">
-				{isAllInOne && selectedDate ? 'No articles for this date.' : 'No articles found.'}
+				{selectedDate ? 'No articles for this date.' : 'No articles found.'}
 			</p>
 		{:else}
 			<div class="flex flex-col gap-3">

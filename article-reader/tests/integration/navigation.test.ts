@@ -47,12 +47,12 @@ function mockFeedItem(overrides: Partial<FeedItem> = {}): FeedItem {
 		title: 'Test Article',
 		url: 'https://example.com/article',
 		author: 'Test Author',
-		published_at: '2024-06-01T00:00:00Z',
+		published_at: new Date().toISOString(),
 		tags: [{ category: 'Technology', subcategory: 'AI' }],
 		content_type: 'article',
 		importance_score: 8,
 		summary: 'This is a test article summary.',
-		classified_at: '2024-06-01T12:00:00Z',
+		classified_at: new Date().toISOString(),
 		category: 'Technology',
 		...overrides
 	};
