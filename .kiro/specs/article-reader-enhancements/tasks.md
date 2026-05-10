@@ -97,27 +97,27 @@ This plan implements five client-side enhancements to the existing Article Reade
     - Show empty state message when no articles exist for the selected date
     - _Requirements: 1.4, 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 5. Implement read filtering and group read state in UI
-  - [ ] 5.1 Modify `src/routes/category/[slug]/+page.svelte` for read filtering
+- [x] 5. Implement read filtering and group read state in UI
+  - [x] 5.1 Modify `src/routes/category/[slug]/+page.svelte` for read filtering
     - Import `groupReadState`, `readState`, and `sessionReadSet` stores
     - Apply `filterReadItems` to the items list before rendering (filter out read articles and groups, but keep session-read items visible)
     - When user reads an article/group and returns, add the item to `sessionReadSet` so it stays visible with a read indicator
     - Clear `sessionReadSet` on navigation away (use `beforeNavigate` or `onDestroy`)
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
-  - [ ] 5.2 Modify `src/routes/+page.svelte` and `CategoryCard` to show read/unread/total counts
+  - [x] 5.2 Modify `src/routes/+page.svelte` and `CategoryCard` to show read/unread/total counts
     - Compute per-category: total items, read items, unread items
     - Update `CategoryCard` to accept and display all three counts (e.g., "3 read / 7 unread / 10 total")
     - The "All in one" card should also display read/unread/total counts
     - _Requirements: 3.6_
-  - [ ] 5.3 Modify `src/routes/group/[id]/+page.svelte` to mark group as read
+  - [x] 5.3 Modify `src/routes/group/[id]/+page.svelte` to mark group as read
     - On mount, call `groupReadState.markGroupAsRead(group.id, memberArticleIds)` which marks the group AND all member articles as read
     - _Requirements: 3a.3, 3a.4_
-  - [ ] 5.4 Modify `GroupCard.svelte` for read/unread indicator and mark-as-read button
+  - [x] 5.4 Modify `GroupCard.svelte` for read/unread indicator and mark-as-read button
     - Accept new props: `isRead: boolean`, `onMarkRead?: (id: number) => void`
     - Show unread indicator (blue dot) consistent with `ArticleCard`
     - Add a "Mark as read" button that calls `onMarkRead` without navigating
     - _Requirements: 3a.2, 3a.6_
-  - [ ] 5.5 Wire GroupCard read state in `category/[slug]/+page.svelte`
+  - [x] 5.5 Wire GroupCard read state in `category/[slug]/+page.svelte`
     - Pass `isRead` prop to `GroupCard` based on `groupReadState`
     - Pass `onMarkRead` handler that calls `groupReadState.markGroupAsRead` with the group's member article IDs (fetch group detail or use available data)
     - _Requirements: 3a.2, 3a.6_

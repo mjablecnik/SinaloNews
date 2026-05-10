@@ -7,6 +7,7 @@
 	import CategoryCard from '$lib/components/CategoryCard.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import { readState } from '$lib/stores/readState';
 
 	const ORDER_KEY = 'article-reader:category-order';
 
@@ -163,6 +164,25 @@
 		document.addEventListener('touchmove', handler, { passive: false });
 		return () => document.removeEventListener('touchmove', handler);
 	});
+
+	interface ReadCounts { read: number; unread: number; total: number }
+
+	let categoryReadCounts = $derived.by((): Record<string, ReadCounts> => {
+		const result: Record<string, ReadCounts> = {};
+		for (const [cat, ids] of Object.entries(data.articleIdsByCategory ?? {})) {
+			const total = ids.length;
+			const read = ids.filter((id) => $readState.includes(id)).length;
+			result[cat] = { read, unread: total - read, total };
+		}
+		return result;
+	});
+
+	let totalReadCounts = $derived.by((): ReadCounts => {
+		const ids = data.allArticleIds ?? [];
+		const total = ids.length;
+		const read = ids.filter((id) => $readState.includes(id)).length;
+		return { read, unread: total - read, total };
+	});
 </script>
 
 <main class="container mx-auto max-w-2xl px-4 py-8">
@@ -181,7 +201,9 @@
 				class="flex flex-col gap-1 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 p-4 text-left shadow-md hover:shadow-lg transition-all"
 			>
 				<span class="text-base font-semibold text-white">All in one</span>
-				<span class="text-sm text-blue-100">{data.totalCount} {data.totalCount === 1 ? 'article' : 'articles'}</span>
+				<span class="text-sm text-blue-100">
+					{totalReadCounts.read} read / {totalReadCounts.unread} unread / {totalReadCounts.total} total
+				</span>
 			</a>
 			{#each orderedCategories as cat, i}
 				<div
@@ -196,7 +218,12 @@
 					ontouchend={handleTouchEnd}
 					class="select-none transition-transform {dragOverIndex === i ? 'border-t-2 border-blue-400' : ''} {dragIndex === i || touchDragIndex === i ? 'opacity-50' : ''}"
 				>
-					<CategoryCard category={cat.category} count={cat.count} />
+					<CategoryCard
+						category={cat.category}
+						count={cat.count}
+						readCount={categoryReadCounts[cat.category]?.read ?? 0}
+						unreadCount={categoryReadCounts[cat.category]?.unread ?? cat.count}
+					/>
 				</div>
 			{/each}
 		</div>

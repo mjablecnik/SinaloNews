@@ -1,13 +1,15 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	import { goto, invalidate } from '$app/navigation';
+	import { goto, invalidate, beforeNavigate } from '$app/navigation';
 	import { readState } from '$lib/stores/readState';
+	import { groupReadState } from '$lib/stores/groupReadState';
+	import { sessionReadSet } from '$lib/stores/sessionReadSet';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
 	import GroupCard from '$lib/components/GroupCard.svelte';
 	import SubcategoryFilter from '$lib/components/SubcategoryFilter.svelte';
 	import DateFilter from '$lib/components/DateFilter.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
-	import { extractUniqueDates, getTodayDateString, sortByDateThenImportance, formatDateOnly } from '$lib/utils';
+	import { extractUniqueDates, getTodayDateString, sortByDateThenImportance, formatDateOnly, filterReadItems } from '$lib/utils';
 	import type { ArticleSummary } from '$lib/types';
 
 	let { data }: { data: PageData } = $props();
@@ -31,9 +33,11 @@
 
 	let dates = $derived(extractUniqueDates(data.items));
 
+	let visibleItems = $derived(filterReadItems(data.items, $readState, $groupReadState, $sessionReadSet));
+
 	let filteredItems = $derived.by(() => {
 		if (isAllInOne) {
-			const sorted = sortByDateThenImportance(data.items);
+			const sorted = sortByDateThenImportance(visibleItems);
 			if (!selectedDate) return sorted;
 			return sorted.filter((item) => {
 				const dateStr = item.published_at ?? item.grouped_date;
@@ -42,12 +46,29 @@
 			});
 		}
 		return selectedSubcategory
-			? data.items.filter((item) =>
+			? visibleItems.filter((item) =>
 					item.tags.some(
 						(t) => t.category === data.category && t.subcategory === selectedSubcategory
 					)
 				)
-			: data.items;
+			: visibleItems;
+	});
+
+	beforeNavigate(({ to }) => {
+		const path = to?.url.pathname ?? '';
+		const articleMatch = path.match(/^\/article\/(\d+)$/);
+		const groupMatch = path.match(/^\/group\/(\d+)$/);
+
+		if (articleMatch) {
+			const id = parseInt(articleMatch[1]);
+			readState.markAsRead(id);
+			sessionReadSet.add('article', id);
+		} else if (groupMatch) {
+			const id = parseInt(groupMatch[1]);
+			sessionReadSet.add('group', id);
+		} else {
+			sessionReadSet.clear();
+		}
 	});
 </script>
 
@@ -92,12 +113,22 @@
 			<div class="flex flex-col gap-3">
 				{#each filteredItems as item}
 					{#if item.type === 'group'}
-						<GroupCard group={item} />
+						<GroupCard
+							group={item}
+							isRead={$groupReadState.includes(item.id) || $sessionReadSet.has(`group:${item.id}`)}
+							onMarkRead={(id) => {
+								groupReadState.markGroupAsRead(id, []);
+								sessionReadSet.add('group', id);
+							}}
+						/>
 					{:else}
 						<ArticleCard
 							article={item as unknown as ArticleSummary}
-							isRead={$readState.includes(item.id)}
-							onMarkRead={(id) => readState.markAsRead(id)}
+							isRead={$readState.includes(item.id) || $sessionReadSet.has(`article:${item.id}`)}
+							onMarkRead={(id) => {
+								readState.markAsRead(id);
+								sessionReadSet.add('article', id);
+							}}
 						/>
 					{/if}
 				{/each}

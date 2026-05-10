@@ -3,7 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 
 vi.mock('$app/navigation', () => ({
 	goto: vi.fn(),
-	invalidate: vi.fn()
+	invalidate: vi.fn(),
+	beforeNavigate: vi.fn()
 }));
 
 vi.mock('$env/static/public', () => ({
@@ -73,6 +74,9 @@ describe('navigation flow', () => {
 					{ category: 'Technology', count: 5 },
 					{ category: 'Politics', count: 2 }
 				],
+				totalCount: 7,
+				articleIdsByCategory: { Technology: [1, 2], Politics: [3] },
+				allArticleIds: [1, 2, 3],
 				error: null
 			}
 		});
@@ -133,7 +137,7 @@ describe('navigation flow', () => {
 describe('error handling', () => {
 	it('API unreachable on category screen shows error message', () => {
 		render(CategoryPage, {
-			data: { categories: [], error: 'Service unavailable' }
+			data: { categories: [], totalCount: 0, articleIdsByCategory: {}, allArticleIds: [], error: 'Service unavailable' }
 		});
 
 		expect(screen.getByText('Service unavailable')).toBeTruthy();
@@ -141,7 +145,7 @@ describe('error handling', () => {
 
 	it('Category screen error: Try Again button calls invalidate', async () => {
 		render(CategoryPage, {
-			data: { categories: [], error: 'Service unavailable' }
+			data: { categories: [], totalCount: 0, articleIdsByCategory: {}, allArticleIds: [], error: 'Service unavailable' }
 		});
 
 		const retryBtn = screen.getByText('Try Again');

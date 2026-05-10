@@ -4,9 +4,11 @@
 
 	interface Props {
 		group: FeedItem;
+		isRead?: boolean;
+		onMarkRead?: (id: number) => void;
 	}
 
-	let { group }: Props = $props();
+	let { group, isRead = false, onMarkRead }: Props = $props();
 
 	function formatDate(dateStr: string | null | undefined): string {
 		if (!dateStr) return '';
@@ -34,7 +36,9 @@
 
 <button
 	onclick={navigate}
-	class="relative flex w-full flex-col gap-2 rounded-lg border border-purple-200 bg-white p-4 text-left shadow-sm hover:shadow-md transition-all"
+	class="relative flex w-full flex-col gap-2 rounded-lg border bg-white p-4 text-left shadow-sm hover:shadow-md transition-all {isRead
+		? 'border-purple-100'
+		: 'border-purple-200'}"
 >
 	<!-- Stacked card visual indicator -->
 	<span
@@ -43,6 +47,10 @@
 	<span
 		class="absolute -bottom-3 left-4 right-4 h-full rounded-lg border border-purple-50 bg-purple-50 -z-20"
 	></span>
+
+	{#if !isRead}
+		<span class="inline-block h-2 w-2 rounded-full bg-blue-500" aria-label="Unread"></span>
+	{/if}
 
 	<div class="flex items-start gap-2">
 		<span class="mt-0.5 text-purple-500" title="Article group" aria-label="Article group">
@@ -81,6 +89,15 @@
 			<span class="rounded bg-gray-100 px-1.5 py-0.5 text-gray-600">
 				{group.member_count} articles
 			</span>
+		{/if}
+		{#if !isRead && onMarkRead}
+			<button
+				onclick={(e) => { e.stopPropagation(); onMarkRead(group.id); }}
+				class="ml-auto rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+				title="Mark as read"
+			>
+				✓ Read
+			</button>
 		{/if}
 	</div>
 

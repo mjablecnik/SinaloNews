@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { onMount } from 'svelte';
-	import { readState } from '$lib/stores/readState';
+	import { groupReadState } from '$lib/stores/groupReadState';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 
@@ -9,9 +9,10 @@
 
 	onMount(() => {
 		if (data.group) {
-			for (const member of data.group.members) {
-				readState.markAsRead(member.id);
-			}
+			groupReadState.markGroupAsRead(
+				data.group.id,
+				data.group.members.map((m) => m.id)
+			);
 		}
 	});
 
