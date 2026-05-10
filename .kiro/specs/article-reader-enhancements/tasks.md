@@ -122,7 +122,7 @@ This plan implements five client-side enhancements to the existing Article Reade
     - Pass `onMarkRead` handler that calls `groupReadState.markGroupAsRead` with the group's member article IDs (fetch group detail or use available data)
     - _Requirements: 3a.2, 3a.6_
 
-- [ ] 6. Checkpoint
+- [x] 6. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 7. Implement saved/bookmarked items feature
