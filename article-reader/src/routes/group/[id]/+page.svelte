@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { groupReadState } from '$lib/stores/groupReadState';
 	import { savedItems } from '$lib/stores/savedItems';
+	import { formatDateTime } from '$lib/utils';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import SaveButton from '$lib/components/SaveButton.svelte';
@@ -17,15 +18,6 @@
 			);
 		}
 	});
-
-	function formatDate(dateStr: string | null): string {
-		if (!dateStr) return '';
-		return new Date(dateStr).toLocaleDateString(undefined, {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric'
-		});
-	}
 
 	function getSource(url: string | null): string {
 		if (!url) return '';
@@ -52,7 +44,7 @@
 					<span class="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
 						Group · {group.member_count} articles
 					</span>
-					<span class="text-sm text-gray-500">{formatDate(group.grouped_date)}</span>
+					<span class="text-sm text-gray-500">{formatDateTime(group.grouped_date)}</span>
 				</div>
 				<h1 class="text-xl font-bold text-gray-900">{group.title}</h1>
 				<SaveButton
@@ -99,7 +91,7 @@
 										<span>{getSource(member.url)}</span>
 									{/if}
 									{#if member.published_at}
-										<span>{formatDate(member.published_at)}</span>
+										<span>{formatDateTime(member.published_at)}</span>
 									{/if}
 									<span class="rounded bg-gray-100 px-1 font-medium text-gray-600">
 										{member.importance_score}/10
