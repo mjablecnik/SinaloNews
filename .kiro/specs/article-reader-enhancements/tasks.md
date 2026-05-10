@@ -174,7 +174,7 @@ This plan implements five client-side enhancements to the existing Article Reade
     - Display both date and time in the article detail header
     - _Requirements: 5.2, 5.4, 5.5_
 
-- [ ] 9. Final checkpoint
+- [x] 9. Final checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

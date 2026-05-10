@@ -7,6 +7,12 @@ vi.mock('$app/navigation', () => ({
 	beforeNavigate: vi.fn()
 }));
 
+vi.mock('$app/stores', () => ({
+	navigating: { subscribe: vi.fn((fn: (v: null) => void) => { fn(null); return () => {}; }) },
+	page: { subscribe: vi.fn((fn: (v: object) => void) => { fn({}); return () => {}; }) },
+	updated: { subscribe: vi.fn((fn: (v: boolean) => void) => { fn(false); return () => {}; }) }
+}));
+
 vi.mock('$env/static/public', () => ({
 	PUBLIC_ARTICLE_API_URL: 'http://localhost:8002'
 }));
