@@ -9,29 +9,23 @@ export const load: PageLoad = async ({ params, depends }) => {
 	depends('app:category');
 	const s = get(settings);
 	const category = decodeURIComponent(params.slug);
+	const isAllInOne = category === '__all__';
 	try {
 		const pageSize = 100;
-		const firstPage = await getFeed({
-			category,
+		const feedParams = {
+			...(isAllInOne ? {} : { category }),
 			min_score: s.minScore,
 			date_from: buildDateFrom(s.daysBack),
 			page: 1,
 			size: pageSize
-		});
+		};
+		const firstPage = await getFeed(feedParams);
 		const allItems: FeedItem[] = [...firstPage.items];
 		const totalPages = firstPage.pages;
 		if (totalPages > 1) {
 			const pagePromises = [];
 			for (let page = 2; page <= totalPages; page++) {
-				pagePromises.push(
-					getFeed({
-						category,
-						min_score: s.minScore,
-						date_from: buildDateFrom(s.daysBack),
-						page,
-						size: pageSize
-					})
-				);
+				pagePromises.push(getFeed({ ...feedParams, page }));
 			}
 			const pages = await Promise.all(pagePromises);
 			for (const page of pages) {

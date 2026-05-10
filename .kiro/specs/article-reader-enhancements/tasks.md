@@ -71,24 +71,24 @@ This plan implements five client-side enhancements to the existing Article Reade
 - [x] 3. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Implement "All in one" category and date filter
-  - [ ] 4.1 Modify `src/routes/+page.svelte` to add "All in one" card
+- [x] 4. Implement "All in one" category and date filter
+  - [x] 4.1 Modify `src/routes/+page.svelte` to add "All in one" card
     - Add a special "All in one" card at the top of the category list, outside the drag-and-drop reorderable area
     - Display total count of all articles/groups across all categories
     - Give it a visually distinct appearance (e.g., gradient or different color scheme)
     - On click, navigate to `/category/__all__`
     - _Requirements: 1.1, 1.2, 1.5, 1.6_
-  - [ ] 4.2 Modify `src/routes/category/[slug]/+page.ts` to handle `__all__` slug
+  - [x] 4.2 Modify `src/routes/category/[slug]/+page.ts` to handle `__all__` slug
     - When slug is `__all__`, call `getFeed()` without a `category` parameter to fetch all items across all categories
     - Keep existing behavior for regular category slugs
     - _Requirements: 1.3_
-  - [ ] 4.3 Create `src/lib/components/DateFilter.svelte`
+  - [x] 4.3 Create `src/lib/components/DateFilter.svelte`
     - Accept props: `dates: string[]`, `selected: string | null`, `onSelect: (date: string | null) => void`
     - Render a horizontal scrollable row of date chips
     - Display dates in human-readable format (e.g., "Mon, Jan 6")
     - Highlight the selected date chip
     - _Requirements: 2.1, 2.6_
-  - [ ] 4.4 Modify `src/routes/category/[slug]/+page.svelte` for date filter and sorting
+  - [x] 4.4 Modify `src/routes/category/[slug]/+page.svelte` for date filter and sorting
     - When slug is `__all__`, show `DateFilter` instead of `SubcategoryFilter`
     - Extract unique dates from items using `extractUniqueDates`
     - Default selected date to today (`getTodayDateString()`)

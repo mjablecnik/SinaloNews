@@ -13,9 +13,9 @@ export const load: PageLoad = async ({ depends }) => {
 			min_score: s.minScore,
 			date_from: buildDateFrom(s.daysBack)
 		});
-		return { categories: extractCategories(articles), error: null };
+		return { categories: extractCategories(articles), totalCount: articles.length, error: null };
 	} catch (e) {
 		const error = e instanceof Error ? e.message : 'Failed to load articles';
-		return { categories: [] as CategoryCount[], error };
+		return { categories: [] as CategoryCount[], totalCount: 0, error };
 	}
 };

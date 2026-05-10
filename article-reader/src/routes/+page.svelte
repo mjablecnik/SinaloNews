@@ -176,6 +176,13 @@
 		<p class="py-12 text-center text-gray-500">No categories available.</p>
 	{:else}
 		<div class="flex flex-col gap-3">
+			<a
+				href="/category/__all__"
+				class="flex flex-col gap-1 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 p-4 text-left shadow-md hover:shadow-lg transition-all"
+			>
+				<span class="text-base font-semibold text-white">All in one</span>
+				<span class="text-sm text-blue-100">{data.totalCount} {data.totalCount === 1 ? 'article' : 'articles'}</span>
+			</a>
 			{#each orderedCategories as cat, i}
 				<div
 					data-cat-index={i}
