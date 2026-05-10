@@ -2,8 +2,10 @@
 	import type { PageData } from './$types';
 	import { onMount } from 'svelte';
 	import { groupReadState } from '$lib/stores/groupReadState';
+	import { savedItems } from '$lib/stores/savedItems';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
+	import SaveButton from '$lib/components/SaveButton.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -45,7 +47,7 @@
 	{:else if data.group}
 		{@const group = data.group}
 		<article>
-			<div class="mb-4 space-y-1">
+			<div class="mb-4 space-y-2">
 				<div class="flex items-center gap-2">
 					<span class="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
 						Group · {group.member_count} articles
@@ -53,6 +55,10 @@
 					<span class="text-sm text-gray-500">{formatDate(group.grouped_date)}</span>
 				</div>
 				<h1 class="text-xl font-bold text-gray-900">{group.title}</h1>
+				<SaveButton
+					isSaved={$savedItems.groups.includes(group.id)}
+					onToggle={() => savedItems.toggleGroup(group.id)}
+				/>
 			</div>
 
 			<section class="mb-6">

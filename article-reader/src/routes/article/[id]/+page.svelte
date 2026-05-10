@@ -3,9 +3,11 @@
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { readState } from '$lib/stores/readState';
+	import { savedItems } from '$lib/stores/savedItems';
 	import { formatExtractedText, sanitizeSummary } from '$lib/utils';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
+	import SaveButton from '$lib/components/SaveButton.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -92,18 +94,24 @@
 				/>
 			{/if}
 
-			{#if article.url}
-				<a
-					href={article.url}
-					target="_blank"
-					rel="noopener noreferrer"
-					class="mb-6 inline-block rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 {!article.extracted_text
-						? 'text-base font-semibold'
-						: ''}"
-				>
-					Read Original ↗
-				</a>
-			{/if}
+			<div class="mb-6 flex flex-wrap items-center gap-2">
+				{#if article.url}
+					<a
+						href={article.url}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="inline-block rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 {!article.extracted_text
+							? 'text-base font-semibold'
+							: ''}"
+					>
+						Read Original ↗
+					</a>
+				{/if}
+				<SaveButton
+					isSaved={$savedItems.articles.includes(article.id)}
+					onToggle={() => savedItems.toggleArticle(article.id)}
+				/>
+			</div>
 
 			{#if article.summary}
 				<section class="mb-6">
