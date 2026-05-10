@@ -15,12 +15,11 @@
 	interface Props {
 		category: string;
 		count: number;
-		readCount?: number;
 		unreadCount?: number;
 		colorIndex?: number;
 	}
 
-	let { category, count, readCount, unreadCount, colorIndex }: Props = $props();
+	let { category, count, unreadCount, colorIndex }: Props = $props();
 
 	function navigate() {
 		goto(`/category/${encodeURIComponent(category)}`);
@@ -39,8 +38,8 @@
 	class="flex w-full flex-col gap-1 rounded-lg p-4 text-left shadow-sm hover:shadow-md transition-all {bgClasses}"
 >
 	<span class="text-base font-semibold {textClass}">{category}</span>
-	{#if readCount !== undefined && unreadCount !== undefined}
-		<span class="text-sm {subtextClass}">{readCount} read / {unreadCount} unread / {count} total</span>
+	{#if unreadCount !== undefined}
+		<span class="text-sm {subtextClass}">{unreadCount} unread</span>
 	{:else}
 		<span class="text-sm {subtextClass}">{count} {count === 1 ? 'article' : 'articles'}</span>
 	{/if}

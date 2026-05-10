@@ -22,22 +22,26 @@
 	let visibleItems = $derived(filterReadItems(data.items, $readState, $groupReadState, $sessionReadSet));
 
 	let filteredItems = $derived.by(() => {
-		if (isAllInOne) {
-			const sorted = sortByImportance(visibleItems);
-			if (!selectedDate) return sorted;
-			return sorted.filter((item) => {
-				const dateStr = item.published_at ?? item.grouped_date;
-				if (!dateStr) return false;
-				return formatDateOnly(dateStr) === selectedDate;
-			});
-		}
-		if (!selectedDate) return visibleItems;
-		return visibleItems.filter((item) => {
+		const sorted = sortByImportance(visibleItems);
+		if (!selectedDate) return sorted;
+		return sorted.filter((item) => {
 			const dateStr = item.published_at ?? item.grouped_date;
 			if (!dateStr) return false;
 			return formatDateOnly(dateStr) === selectedDate;
 		});
 	});
+
+	let unreadCount = $derived(
+		filteredItems.filter((item) => {
+			const key = `${item.type}:${item.id}`;
+			if ($sessionReadSet.has(key)) {
+				// Session-read items are visible but count as read
+				if (item.type === 'group') return !$groupReadState.includes(item.id);
+				return !$readState.includes(item.id);
+			}
+			return true; // If it passed filterReadItems and isn't session-read, it's unread
+		}).length
+	);
 
 	beforeNavigate(({ to }) => {
 		const path = to?.url.pathname ?? '';
@@ -77,6 +81,7 @@
 		{#if dates.length > 0}
 			<div class="mb-4">
 				<DateFilter {dates} selected={selectedDate} onSelect={(d) => { selectedDate = d; }} />
+				<p class="mt-2 text-xs text-gray-500">{unreadCount} unread</p>
 			</div>
 		{/if}
 

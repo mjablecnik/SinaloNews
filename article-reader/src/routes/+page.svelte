@@ -213,7 +213,7 @@
 			>
 				<span class="text-base font-semibold text-white">All in one</span>
 				<span class="text-sm text-blue-100">
-					{totalReadCounts.read} read / {totalReadCounts.unread} unread / {totalReadCounts.total} total
+					{totalReadCounts.unread} unread
 				</span>
 			</a>
 			{#each orderedCategories as cat, i}
@@ -232,7 +232,6 @@
 					<CategoryCard
 						category={cat.category}
 						count={cat.count}
-						readCount={categoryReadCounts[cat.category]?.read ?? 0}
 						unreadCount={categoryReadCounts[cat.category]?.unread ?? cat.count}
 					/>
 				</div>
