@@ -9,7 +9,7 @@
 	import SubcategoryFilter from '$lib/components/SubcategoryFilter.svelte';
 	import DateFilter from '$lib/components/DateFilter.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
-	import { extractUniqueDates, getTodayDateString, sortByDateThenImportance, formatDateOnly, filterReadItems } from '$lib/utils';
+	import { extractUniqueDates, getTodayDateString, sortByImportance, formatDateOnly, filterReadItems } from '$lib/utils';
 	import type { ArticleSummary } from '$lib/types';
 
 	let { data }: { data: PageData } = $props();
@@ -37,7 +37,7 @@
 
 	let filteredItems = $derived.by(() => {
 		if (isAllInOne) {
-			const sorted = sortByDateThenImportance(visibleItems);
+			const sorted = sortByImportance(visibleItems);
 			if (!selectedDate) return sorted;
 			return sorted.filter((item) => {
 				const dateStr = item.published_at ?? item.grouped_date;

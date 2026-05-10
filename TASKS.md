@@ -1,7 +1,7 @@
 # TASKS
 
 - [x] 1. [HIGH] Add `sortByImportance` function to `src/lib/utils.ts` that sorts FeedItem[] by `importance_score` descending
-- [ ] 2. [HIGH] Update `filteredItems` in `src/routes/category/[slug]/+page.svelte` to sort by importance (not date-then-importance) when `isAllInOne` is true
+- [x] 2. [HIGH] Update `filteredItems` in `src/routes/category/[slug]/+page.svelte` to sort by importance (not date-then-importance) when `isAllInOne` is true
 - [ ] 3. [HIGH] Replace `SubcategoryFilter` with `DateFilter` in category pages — remove subcategory filtering logic, add date filtering with `selectedDate` defaulting to today
 - [ ] 4. [HIGH] Update `filteredItems` derived for non-"All in One" categories to filter by selected date instead of subcategory
 - [ ] 5. [MEDIUM] Update `CategoryCard.svelte` to accept a `color` prop (gradient classes or style) and render with colored background instead of white
