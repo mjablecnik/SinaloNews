@@ -6,11 +6,11 @@ This plan implements five client-side enhancements to the existing Article Reade
 
 ## Tasks
 
-- [ ] 1. Add utility functions and types
-  - [ ] 1.1 Add `SavedItems` interface to `src/lib/types.ts`
+- [x] 1. Add utility functions and types
+  - [x] 1.1 Add `SavedItems` interface to `src/lib/types.ts`
     - Add `export interface SavedItems { articles: number[]; groups: number[] }`
     - _Requirements: 4.4, 4.10_
-  - [ ] 1.2 Add date and sorting utility functions to `src/lib/utils.ts`
+  - [x] 1.2 Add date and sorting utility functions to `src/lib/utils.ts`
     - Add `formatDateTime(dateStr: string | null): string` using `Intl.DateTimeFormat` with user locale for date + time (hours:minutes)
     - Add `formatDateOnly(dateStr: string): string` returning YYYY-MM-DD
     - Add `extractUniqueDates(items: FeedItem[]): string[]` returning unique dates sorted newest-first from `published_at` or `grouped_date`
@@ -36,15 +36,15 @@ This plan implements five client-side enhancements to the existing Article Reade
     - **Property 11: DateTime formatting includes both date and time components**
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.5**
 
-- [ ] 2. Implement new stores
-  - [ ] 2.1 Create `src/lib/stores/groupReadState.ts`
+- [x] 2. Implement new stores
+  - [x] 2.1 Create `src/lib/stores/groupReadState.ts`
     - Create a store backed by localStorage key `article-reader:read-groups`
     - Store value: `number[]` (group IDs)
     - Expose `markGroupAsRead(groupId: number, memberArticleIds: number[])` that adds the group ID to group read state AND marks all member article IDs as read in the existing `readState` store
     - Expose `isGroupRead(id: number): boolean`
     - Follow the same defensive loading pattern as existing `readState.ts` (validate shape, reset on corruption)
     - _Requirements: 3a.1, 3a.3, 3a.4, 3a.5_
-  - [ ] 2.2 Create `src/lib/stores/savedItems.ts`
+  - [x] 2.2 Create `src/lib/stores/savedItems.ts`
     - Create a store backed by localStorage key `article-reader:saved-items`
     - Store value: `{ articles: number[], groups: number[] }`
     - Expose `toggleArticle(id: number)` — adds if not present, removes if present
@@ -53,7 +53,7 @@ This plan implements five client-side enhancements to the existing Article Reade
     - Expose `isArticleSaved(id: number): boolean` and `isGroupSaved(id: number): boolean`
     - Follow defensive loading pattern (validate shape, reset on corruption)
     - _Requirements: 4.4, 4.5, 4.8, 4.10_
-  - [ ] 2.3 Create `src/lib/stores/sessionReadSet.ts`
+  - [x] 2.3 Create `src/lib/stores/sessionReadSet.ts`
     - Create an in-memory-only writable store (NOT persisted to localStorage)
     - Store value: `Set<string>` where strings are `'article:{id}'` or `'group:{id}'`
     - Expose `add(type: 'article' | 'group', id: number)` and `clear()`
@@ -68,7 +68,7 @@ This plan implements five client-side enhancements to the existing Article Reade
     - **Property 10: Saved items persistence round-trip**
     - **Validates: Requirements 4.4, 4.5, 4.10**
 
-- [ ] 3. Checkpoint
+- [x] 3. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. Implement "All in one" category and date filter
