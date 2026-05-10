@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { marked } from 'marked';
 	import type { ArticleSummary } from '$lib/types';
-	import { sanitizeSummary } from '$lib/utils';
+	import { sanitizeSummary, formatDateTime } from '$lib/utils';
 
 	const renderer = new marked.Renderer();
 	renderer.link = ({ href, text }) => {
@@ -16,15 +16,6 @@
 	}
 
 	let { article, isRead, onMarkRead }: Props = $props();
-
-	function formatDate(dateStr: string | null): string {
-		if (!dateStr) return '';
-		return new Date(dateStr).toLocaleDateString(undefined, {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric'
-		});
-	}
 
 	function getSource(url: string | null): string {
 		if (!url) return '';
@@ -69,7 +60,7 @@
 
 	<div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
 		{#if article.published_at}
-			<span>{formatDate(article.published_at)}</span>
+			<span>{formatDateTime(article.published_at)}</span>
 		{/if}
 		<span class="rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-700">
 			{article.importance_score}/10

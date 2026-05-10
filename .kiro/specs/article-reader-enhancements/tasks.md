@@ -125,51 +125,51 @@ This plan implements five client-side enhancements to the existing Article Reade
 - [x] 6. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Implement saved/bookmarked items feature
-  - [ ] 7.1 Create `src/lib/components/SaveButton.svelte`
+- [x] 7. Implement saved/bookmarked items feature
+  - [x] 7.1 Create `src/lib/components/SaveButton.svelte`
     - Accept props: `isSaved: boolean`, `onToggle: () => void`
     - Render a bookmark icon (filled when saved, outline when unsaved)
     - Visually indicate saved/unsaved state
     - _Requirements: 4.9_
-  - [ ] 7.2 Add save button to `src/routes/article/[id]/+page.svelte`
+  - [x] 7.2 Add save button to `src/routes/article/[id]/+page.svelte`
     - Import `savedItems` store and `SaveButton` component
     - Place save button next to the "Read Original" button
     - Toggle saved state on click using `savedItems.toggleArticle(id)`
     - _Requirements: 4.2, 4.4, 4.5, 4.9_
-  - [ ] 7.3 Add save button to `src/routes/group/[id]/+page.svelte`
+  - [x] 7.3 Add save button to `src/routes/group/[id]/+page.svelte`
     - Import `savedItems` store and `SaveButton` component
     - Place save button in the group detail header area
     - Toggle saved state on click using `savedItems.toggleGroup(id)`
     - _Requirements: 4.3, 4.4, 4.5, 4.9_
-  - [ ] 7.4 Create saved items page at `src/routes/saved/+page.ts`
+  - [x] 7.4 Create saved items page at `src/routes/saved/+page.ts`
     - Load saved item IDs from the `savedItems` store
     - Fetch article details for each saved article ID using `getArticleDetail`
     - Fetch group details for each saved group ID using `getGroupDetail`
     - Handle 404 responses gracefully (mark items as unavailable)
     - Display items in reverse insertion order (most recently saved first)
     - _Requirements: 4.7, 4.8, 4.12_
-  - [ ] 7.5 Create saved items page at `src/routes/saved/+page.svelte`
+  - [x] 7.5 Create saved items page at `src/routes/saved/+page.svelte`
     - Display all saved articles and groups regardless of read state
     - Show articles using `ArticleCard` and groups using `GroupCard`
     - Provide a remove button on each item to unsave it
     - Show unavailable items with a "remove from saved" option
     - Show empty state when no items are saved
     - _Requirements: 4.1, 4.6, 4.9, 4.12_
-  - [ ] 7.6 Add navigation link to saved page in `src/routes/+layout.svelte` or `+page.svelte`
+  - [x] 7.6 Add navigation link to saved page in `src/routes/+layout.svelte` or `+page.svelte`
     - Add a link/button to access the saved items page from the category selection screen
     - _Requirements: 4.1_
 
-- [ ] 8. Implement publication time display
-  - [ ] 8.1 Update `ArticleCard.svelte` to show publication time
+- [x] 8. Implement publication time display
+  - [x] 8.1 Update `ArticleCard.svelte` to show publication time
     - Replace the existing `formatDate` call with `formatDateTime` from utils
     - Display both date and time (e.g., "Jan 6, 2025 14:30")
     - If `published_at` is null, display nothing
     - _Requirements: 5.1, 5.4, 5.5_
-  - [ ] 8.2 Update `GroupCard.svelte` to show publication time
+  - [x] 8.2 Update `GroupCard.svelte` to show publication time
     - Replace the existing `formatDate` call with `formatDateTime` from utils
     - Display both date and time for `grouped_date`
     - _Requirements: 5.3, 5.4_
-  - [ ] 8.3 Update `article/[id]/+page.svelte` to show publication time
+  - [x] 8.3 Update `article/[id]/+page.svelte` to show publication time
     - Replace the existing `formatDate` call with `formatDateTime` from utils
     - Display both date and time in the article detail header
     - _Requirements: 5.2, 5.4, 5.5_

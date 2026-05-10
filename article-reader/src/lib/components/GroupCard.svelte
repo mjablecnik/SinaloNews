@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import type { FeedItem, Tag } from '$lib/types';
+	import { formatDateTime } from '$lib/utils';
 
 	interface Props {
 		group: FeedItem;
@@ -9,15 +10,6 @@
 	}
 
 	let { group, isRead = false, onMarkRead }: Props = $props();
-
-	function formatDate(dateStr: string | null | undefined): string {
-		if (!dateStr) return '';
-		return new Date(dateStr).toLocaleDateString(undefined, {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric'
-		});
-	}
 
 	function uniqueTags(tags: Tag[]): Tag[] {
 		const seen = new Set<string>();
@@ -80,7 +72,7 @@
 
 	<div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
 		{#if group.grouped_date}
-			<span>{formatDate(group.grouped_date)}</span>
+			<span>{formatDateTime(group.grouped_date)}</span>
 		{/if}
 		<span class="rounded bg-purple-100 px-1.5 py-0.5 font-medium text-purple-700">
 			{group.importance_score}/10

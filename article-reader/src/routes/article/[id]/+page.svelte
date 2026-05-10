@@ -4,7 +4,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { readState } from '$lib/stores/readState';
 	import { savedItems } from '$lib/stores/savedItems';
-	import { formatExtractedText, sanitizeSummary } from '$lib/utils';
+	import { formatExtractedText, sanitizeSummary, formatDateTime } from '$lib/utils';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import SaveButton from '$lib/components/SaveButton.svelte';
@@ -24,15 +24,6 @@
 			}
 		}
 	});
-
-	function formatDate(dateStr: string | null): string {
-		if (!dateStr) return '';
-		return new Date(dateStr).toLocaleDateString(undefined, {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric'
-		});
-	}
 
 	function getSource(url: string | null): string {
 		if (!url) return '';
@@ -75,7 +66,7 @@
 						<span>{article.author}</span>
 					{/if}
 					{#if article.published_at}
-						<span>{formatDate(article.published_at)}</span>
+						<span>{formatDateTime(article.published_at)}</span>
 					{/if}
 					<span class="rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-700">
 						{article.importance_score}/10
