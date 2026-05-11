@@ -11,7 +11,7 @@ from src.database import AsyncSessionFactory
 from src.embedding_client import EmbeddingClient, EmbeddingError
 from src.grouping_pipeline import GroupingPipeline
 from src.grouping_schemas import ArticleForDetail, GroupingTriggerResponse, RegenerationResponse
-from src.models import Article, ArticleGroup, ArticleGroupMember, ClassificationResult, FullArticleIndexed
+from src.models import Article, ArticleGroup, ArticleGroupMember, ArticleTag, ClassificationResult, FullArticleIndexed, Tag
 from src.similarity_service import SimilarityService
 
 log = structlog.get_logger()
@@ -73,6 +73,27 @@ class GroupingService:
         stmt = select(ArticleGroupMember).where(ArticleGroupMember.article_id == article_id)
         result = await session.execute(stmt)
         return result.scalars().first() is not None
+
+    async def _get_article_category(self, session: AsyncSession, article_id: int) -> str:
+        """Get the main category of an article from its first tag."""
+        stmt = (
+            select(ArticleTag)
+            .where(ArticleTag.classification_result_id == (
+                select(ClassificationResult.id)
+                .where(ClassificationResult.article_id == article_id)
+                .scalar_subquery()
+            ))
+            .options(selectinload(ArticleTag.tag).selectinload(Tag.parent))
+            .order_by(ArticleTag.id.asc())
+            .limit(1)
+        )
+        result = await session.execute(stmt)
+        first_at = result.scalars().first()
+        if first_at and first_at.tag:
+            if first_at.tag.parent:
+                return first_at.tag.parent.name
+            return first_at.tag.name
+        return ""
 
     async def run_grouping(self, target_date: date | None = None) -> GroupingTriggerResponse:
         """Embed unindexed articles, perform similarity matching, create/update groups."""
@@ -225,11 +246,13 @@ class GroupingService:
                         ]
                         grouped_date = max(dates) if dates else target_date
 
+                        category = await self._get_article_category(session, article_id)
+
                         group = ArticleGroup(
                             title=placeholder_title,
                             summary="",
                             detail="",
-                            category="",
+                            category=category,
                             grouped_date=grouped_date,
                             llm_model=None,
                             token_usage=None,
