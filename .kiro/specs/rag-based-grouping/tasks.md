@@ -143,44 +143,44 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - Add `regenerate` to the dispatch case and usage_main
     - _Requirements: 4.1, 4.8_
 
-- [ ] 10. Property-based tests
-  - [ ]* 10.1 Write property test for indexing determinism and completeness
+- [x] 10. Property-based tests
+  - [x]* 10.1 Write property test for indexing determinism and completeness
     - **Property 1: Indexing produces exactly one point per article with deterministic ID and complete metadata**
     - **Validates: Requirements 1.3, 1.4, 1.5**
 
-  - [ ]* 10.2 Write property test for candidate selection
+  - [x]* 10.2 Write property test for candidate selection
     - **Property 2: Only classified, unindexed articles are selected as candidates**
     - **Validates: Requirements 2.1, 2.4**
 
-  - [ ]* 10.3 Write property test for self-exclusion
+  - [x]* 10.3 Write property test for self-exclusion
     - **Property 3: Self-exclusion from similarity search**
     - **Validates: Requirements 3.2**
 
-  - [ ]* 10.4 Write property test for grouping decision correctness
+  - [x]* 10.4 Write property test for grouping decision correctness
     - **Property 4: Grouping decision correctness based on threshold and group membership**
     - **Validates: Requirements 3.4, 3.5, 3.6**
 
-  - [ ]* 10.5 Write property test for single-group membership
+  - [x]* 10.5 Write property test for single-group membership
     - **Property 5: Single-group membership invariant**
     - **Validates: Requirements 3.8**
 
-  - [ ]* 10.6 Write property test for grouped_date correctness
+  - [x]* 10.6 Write property test for grouped_date correctness
     - **Property 6: grouped_date reflects most recent member**
     - **Validates: Requirements 3.9**
 
-  - [ ]* 10.7 Write property test for needs_regeneration on modification
+  - [x]* 10.7 Write property test for needs_regeneration on modification
     - **Property 7: needs_regeneration is set on group creation or modification**
     - **Validates: Requirements 3.10**
 
-  - [ ]* 10.8 Write property test for needs_regeneration cleared after regeneration
+  - [x]* 10.8 Write property test for needs_regeneration cleared after regeneration
     - **Property 8: needs_regeneration is cleared after successful detail regeneration**
     - **Validates: Requirements 4.6**
 
-  - [ ]* 10.9 Write property test for threshold monotonicity
+  - [x]* 10.9 Write property test for threshold monotonicity
     - **Property 9: Threshold monotonicity — higher threshold produces fewer or equal groups**
     - **Validates: Requirements 5.3, 5.4**
 
-  - [ ]* 10.10 Write property test for threshold validation
+  - [x]* 10.10 Write property test for threshold validation
     - **Property 10: Threshold validation rejects values outside [0.0, 1.0]**
     - **Validates: Requirements 5.2**
 
