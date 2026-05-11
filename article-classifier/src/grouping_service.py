@@ -1,146 +1,81 @@
-from collections import defaultdict
-from datetime import date
+from datetime import date, datetime, timezone
 
 import structlog
-from sqlalchemy import cast, func, select
+from qdrant_client import AsyncQdrantClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.config import settings
-from src.constants import GROUPING_EXCLUDED_CONTENT_TYPES
 from src.database import AsyncSessionFactory
+from src.embedding_client import EmbeddingClient, EmbeddingError
 from src.grouping_pipeline import GroupingPipeline
-from src.grouping_schemas import (
-    ArticleForClustering,
-    ArticleForDetail,
-    ClusterItem,
-    ClusteringOutput,
-    ExistingGroupAddition,
-    ExistingGroupForClustering,
-    GroupingTriggerResponse,
-)
-from src.models import Article, ArticleGroup, ArticleGroupMember, ArticleTag, ClassificationResult, Tag
+from src.grouping_schemas import ArticleForDetail, GroupingTriggerResponse, RegenerationResponse
+from src.models import Article, ArticleGroup, ArticleGroupMember, ClassificationResult, FullArticleIndexed
+from src.similarity_service import SimilarityService
 
 log = structlog.get_logger()
 
 
 class GroupingService:
     def __init__(self) -> None:
+        self._embedding_client = EmbeddingClient(
+            api_url=settings.EMBEDDING_API_URL,
+            api_key=settings.OPENROUTER_API_KEY,
+            model=settings.EMBEDDING_MODEL,
+        )
+        qdrant_client = AsyncQdrantClient(
+            url=settings.QDRANT_URL,
+            api_key=settings.QDRANT_API_KEY,
+        )
+        self._similarity_service = SimilarityService(qdrant_client, settings)
         self._pipeline = GroupingPipeline(settings)
         self._model = settings.GROUPING_LLM_MODEL or settings.LLM_MODEL
 
-    async def get_candidates(
-        self, session: AsyncSession, target_date: date
-    ) -> dict[str, list[Article]]:
-        """Fetch ungrouped classified articles for target_date, grouped by first tag category."""
+    async def _get_candidates(self, session: AsyncSession, target_date: date) -> list[Article]:
+        """Fetch classified articles for target_date not yet in full_article_indexed."""
         stmt = (
             select(Article)
             .join(ClassificationResult, ClassificationResult.article_id == Article.id)
-            .outerjoin(ArticleGroupMember, ArticleGroupMember.article_id == Article.id)
+            .outerjoin(FullArticleIndexed, FullArticleIndexed.article_id == Article.id)
             .where(
-                func.date(Article.published_at) == target_date,
-                ClassificationResult.summary.is_not(None),
+                Article.published_at.isnot(None),
+                ClassificationResult.summary.isnot(None),
                 ClassificationResult.summary != "",
-                ClassificationResult.importance_score >= settings.GROUPING_MIN_SCORE,
-                ClassificationResult.content_type.notin_(GROUPING_EXCLUDED_CONTENT_TYPES),
-                ArticleGroupMember.id.is_(None),
+                FullArticleIndexed.article_id.is_(None),
             )
-            .options(
-                selectinload(Article.classification_result)
-                .selectinload(ClassificationResult.article_tags)
-                .selectinload(ArticleTag.tag)
-                .selectinload(Tag.parent)
+            .where(
+                Article.published_at.between(
+                    datetime(target_date.year, target_date.month, target_date.day, 0, 0, 0),
+                    datetime(target_date.year, target_date.month, target_date.day, 23, 59, 59),
+                )
             )
-            .order_by(Article.published_at.desc())
+            .order_by(Article.published_at.asc())
         )
         result = await session.execute(stmt)
-        articles = list(result.scalars().all())
+        return list(result.scalars().all())
 
-        by_category: dict[str, list[Article]] = defaultdict(list)
-        for article in articles:
-            cr = article.classification_result
-            if not cr or not cr.article_tags:
-                continue
-            first_at = min(cr.article_tags, key=lambda at: at.id)
-            tag = first_at.tag
-            if tag and tag.parent:
-                category = tag.parent.name
-            elif tag:
-                category = tag.name
-            else:
-                continue
-            by_category[category].append(article)
-
-        return dict(by_category)
-
-    async def get_existing_groups(
-        self, session: AsyncSession, target_date: date
-    ) -> dict[str, list[ArticleGroup]]:
-        """Fetch existing groups for the date, grouped by category."""
+    async def _get_group_for_article(
+        self, session: AsyncSession, article_id: int
+    ) -> ArticleGroup | None:
+        """Return the ArticleGroup containing the given article_id, or None."""
         stmt = (
             select(ArticleGroup)
-            .where(ArticleGroup.grouped_date == target_date)
-            .options(
-                selectinload(ArticleGroup.members).selectinload(ArticleGroupMember.article)
-            )
+            .join(ArticleGroupMember, ArticleGroupMember.group_id == ArticleGroup.id)
+            .where(ArticleGroupMember.article_id == article_id)
+            .options(selectinload(ArticleGroup.members).selectinload(ArticleGroupMember.article))
         )
         result = await session.execute(stmt)
-        groups = list(result.scalars().all())
+        return result.scalars().first()
 
-        by_category: dict[str, list[ArticleGroup]] = defaultdict(list)
-        for group in groups:
-            by_category[group.category].append(group)
-        return dict(by_category)
-
-    def _validate_clustering_output(
-        self,
-        output: ClusteringOutput,
-        valid_article_ids: set[int],
-    ) -> ClusteringOutput:
-        """Discard single-article groups and filter out invalid IDs.
-
-        Does NOT deduplicate across groups — the same article can appear in
-        multiple clusters. The validation step will resolve overlaps later.
-        """
-        valid_groups: list[ClusterItem] = []
-
-        for cluster in output.groups:
-            filtered_ids = [aid for aid in cluster.article_ids if aid in valid_article_ids]
-            # Remove duplicates within the same cluster
-            filtered_ids = list(dict.fromkeys(filtered_ids))
-            if len(filtered_ids) < 2:
-                log.warning(
-                    "grouping_cluster_discarded",
-                    original_count=len(cluster.article_ids),
-                    filtered_count=len(filtered_ids),
-                    topic=cluster.topic[:60] if cluster.topic else "",
-                )
-                continue
-            valid_groups.append(ClusterItem(
-                article_ids=filtered_ids,
-                topic=cluster.topic,
-                justification=cluster.justification,
-            ))
-
-        valid_additions: list[ExistingGroupAddition] = []
-        for addition in output.existing_group_additions:
-            filtered_ids = [aid for aid in addition.article_ids if aid in valid_article_ids]
-            filtered_ids = list(dict.fromkeys(filtered_ids))
-            if not filtered_ids:
-                continue
-            valid_additions.append(ExistingGroupAddition(
-                group_id=addition.group_id,
-                article_ids=filtered_ids,
-            ))
-
-        return ClusteringOutput(
-            groups=valid_groups,
-            existing_group_additions=valid_additions,
-            standalone_ids=output.standalone_ids,
-        )
+    async def _is_article_in_any_group(self, session: AsyncSession, article_id: int) -> bool:
+        """Return True if the article is already a member of any group."""
+        stmt = select(ArticleGroupMember).where(ArticleGroupMember.article_id == article_id)
+        result = await session.execute(stmt)
+        return result.scalars().first() is not None
 
     async def run_grouping(self, target_date: date | None = None) -> GroupingTriggerResponse:
-        """Run full grouping pipeline for a date. Returns stats."""
+        """Embed unindexed articles, perform similarity matching, create/update groups."""
         if target_date is None:
             target_date = date.today()
 
@@ -151,239 +86,184 @@ class GroupingService:
         articles_grouped = 0
 
         async with AsyncSessionFactory() as session:
-            candidates_by_category = await self.get_candidates(session, target_date)
-            existing_by_category = await self.get_existing_groups(session, target_date)
+            candidates = await self._get_candidates(session, target_date)
 
-        log.info(
-            "grouping_candidates_loaded",
-            categories=len(candidates_by_category),
-            total_articles=sum(len(v) for v in candidates_by_category.values()),
-            existing_groups=sum(len(v) for v in existing_by_category.values()),
-        )
+        log.info("grouping_candidates_loaded", total_articles=len(candidates))
 
-        for category, articles in candidates_by_category.items():
-            # Enforce max articles limit — keep most recent (already sorted desc by published_at)
-            if len(articles) > settings.GROUPING_MAX_ARTICLES_PER_CATEGORY:
-                articles = articles[:settings.GROUPING_MAX_ARTICLES_PER_CATEGORY]
-
-            if len(articles) < settings.GROUPING_MIN_ARTICLES:
-                log.info(
-                    "grouping_category_skipped",
-                    category=category,
-                    article_count=len(articles),
-                    min_articles=settings.GROUPING_MIN_ARTICLES,
-                )
-                continue
-
-            existing_groups = existing_by_category.get(category, [])
-            article_map = {a.id: a for a in articles}
-            valid_article_ids = set(article_map.keys())
-
-            articles_for_clustering = [
-                ArticleForClustering(
-                    id=a.id,
-                    title=a.title,
-                    summary=a.classification_result.summary,
-                    source_url=a.url,
-                )
-                for a in articles
-            ]
-            existing_for_clustering = [
-                ExistingGroupForClustering(
-                    group_id=g.id,
-                    title=g.title,
-                    summary=g.summary,
-                )
-                for g in existing_groups
-            ]
-
-            try:
-                clustering_output = await self._pipeline.cluster(
-                    articles_for_clustering, existing_for_clustering
-                )
-            except Exception as exc:
-                log.error(
-                    "grouping_clustering_failed",
-                    category=category,
-                    error=str(exc)[:500],
-                )
-                continue
-
-            validated = self._validate_clustering_output(clustering_output, valid_article_ids)
-
-            log.info(
-                "grouping_clustering_validated",
-                category=category,
-                new_groups=len(validated.groups),
-                existing_additions=len(validated.existing_group_additions),
+        if not candidates:
+            log.info("grouping_no_candidates", date=str(target_date))
+            return GroupingTriggerResponse(
+                groups_created=0,
+                groups_updated=0,
+                articles_grouped=0,
+                date=target_date,
             )
 
-            # Validate clusters with separate LLM calls (if enabled)
-            if settings.GROUPING_VALIDATE_CLUSTERS:
-                validated_groups = []
-                for cluster in validated.groups:
-                    cluster_articles = [
-                        ArticleForClustering(
-                            id=a.id,
-                            title=a.title,
-                            summary=a.classification_result.summary,
-                            source_url=a.url,
-                        )
-                        for a in [article_map[aid] for aid in cluster.article_ids if aid in article_map]
-                    ]
-                    if len(cluster_articles) < 2:
-                        continue
-                    try:
-                        valid_ids = await self._pipeline.validate_cluster(
-                            cluster.topic, cluster_articles
-                        )
-                        # Keep only validated IDs that are in the original cluster
-                        final_ids = [aid for aid in valid_ids if aid in article_map]
-                        if len(final_ids) >= 2:
-                            validated_groups.append(ClusterItem(
-                                article_ids=final_ids,
-                                topic=cluster.topic,
-                                justification=cluster.justification,
-                            ))
-                        else:
-                            log.info(
-                                "grouping_cluster_removed_after_validation",
-                                topic=cluster.topic[:60],
-                                original_count=len(cluster.article_ids),
-                                valid_count=len(final_ids),
-                            )
-                    except Exception as exc:
-                        log.warning(
-                            "grouping_validation_failed",
-                            topic=cluster.topic[:60],
-                            error=str(exc)[:200],
-                        )
-                        # On validation failure, keep original cluster
-                        validated_groups.append(cluster)
-                validated = ClusteringOutput(
-                    groups=validated_groups,
-                    existing_group_additions=validated.existing_group_additions,
-                    standalone_ids=validated.standalone_ids,
+        await self._similarity_service.ensure_collection()
+
+        # Phase 1: embed and upsert all candidates into Qdrant
+        indexed_article_ids: list[int] = []
+        for article in candidates:
+            if not article.extracted_text or not article.extracted_text.strip():
+                log.warning("grouping_skipping_empty_text", article_id=article.id)
+                continue
+
+            try:
+                vector = await self._embedding_client.embed_text(article.extracted_text)
+            except EmbeddingError as exc:
+                log.error("grouping_embedding_failed", article_id=article.id, error=str(exc)[:300])
+                continue
+
+            try:
+                metadata = {
+                    "article_id": article.id,
+                    "article_title": article.title or "",
+                    "published_at": article.published_at.isoformat() if article.published_at else "",
+                    "indexed_at": datetime.now(timezone.utc).isoformat(),
+                }
+                await self._similarity_service.upsert_article(article.id, vector, metadata)
+            except Exception as exc:
+                log.error("grouping_upsert_failed", article_id=article.id, error=str(exc)[:300])
+                continue
+
+            async with AsyncSessionFactory() as session:
+                try:
+                    session.add(FullArticleIndexed(article_id=article.id))
+                    await session.commit()
+                    indexed_article_ids.append(article.id)
+                except Exception as exc:
+                    await session.rollback()
+                    log.error(
+                        "grouping_index_tracking_failed",
+                        article_id=article.id,
+                        error=str(exc)[:300],
+                    )
+
+        log.info("grouping_indexing_complete", indexed=len(indexed_article_ids))
+
+        # Phase 2: sequential similarity matching for newly indexed articles
+        article_map = {a.id: a for a in candidates}
+
+        for article_id in indexed_article_ids:
+            article = article_map.get(article_id)
+            if article is None or not article.extracted_text:
+                continue
+
+            try:
+                vector = await self._embedding_client.embed_text(article.extracted_text)
+                match = await self._similarity_service.find_most_similar(article_id, vector)
+            except EmbeddingError as exc:
+                log.error(
+                    "grouping_similarity_embedding_failed",
+                    article_id=article_id,
+                    error=str(exc)[:300],
                 )
+                continue
+            except Exception as exc:
+                log.error(
+                    "grouping_similarity_search_failed",
+                    article_id=article_id,
+                    error=str(exc)[:300],
+                )
+                continue
 
-            # Generate details for new groups (LLM calls outside the DB transaction)
-            new_group_data: list[tuple[list[int], object]] = []
-            for cluster in validated.groups:
-                member_articles = [article_map[aid] for aid in cluster.article_ids if aid in article_map]
-                if len(member_articles) < 2:
-                    continue
+            if match is None:
+                log.info("grouping_no_match", article_id=article_id)
+                continue
+
+            matched_article_id, score = match
+
+            if score < settings.GROUPING_SIMILARITY_THRESHOLD:
+                log.info("grouping_below_threshold", article_id=article_id, score=score)
+                continue
+
+            log.info(
+                "grouping_match_found",
+                article_id=article_id,
+                matched_article_id=matched_article_id,
+                score=score,
+            )
+
+            async with AsyncSessionFactory() as session:
                 try:
-                    articles_for_detail = [
-                        ArticleForDetail(id=a.id, title=a.title, extracted_text=a.extracted_text)
-                        for a in member_articles
-                    ]
-                    detail_output = await self._pipeline.generate_detail(articles_for_detail)
-                    new_group_data.append((cluster.article_ids, detail_output))
-                except Exception as exc:
-                    log.error(
-                        "grouping_detail_generation_failed",
-                        category=category,
-                        topic=cluster.topic[:60] if cluster.topic else "",
-                        error=str(exc)[:500],
-                    )
+                    existing_group = await self._get_group_for_article(session, matched_article_id)
 
-            # Persist all new groups in a single per-category transaction
-            if new_group_data:
-                async with AsyncSessionFactory() as session:
-                    try:
-                        for article_ids, detail_output in new_group_data:
-                            group = ArticleGroup(
-                                title=detail_output.title,
-                                summary=detail_output.summary,
-                                detail=detail_output.detail,
-                                category=category,
-                                grouped_date=target_date,
-                                llm_model=self._model,
-                                token_usage=None,
+                    if existing_group is not None:
+                        existing_member_ids = {m.article_id for m in existing_group.members}
+                        if article_id in existing_member_ids:
+                            log.warning(
+                                "grouping_already_member",
+                                article_id=article_id,
+                                group_id=existing_group.id,
                             )
-                            session.add(group)
-                            await session.flush()
-                            for aid in article_ids:
-                                if aid in article_map:
-                                    session.add(ArticleGroupMember(group_id=group.id, article_id=aid))
-                        await session.commit()
-                        groups_created += len(new_group_data)
-                        articles_grouped += sum(len(ids) for ids, _ in new_group_data)
-                        log.info(
-                            "grouping_new_groups_persisted",
-                            category=category,
-                            count=len(new_group_data),
-                        )
-                    except Exception as exc:
-                        await session.rollback()
-                        log.error(
-                            "grouping_category_persist_failed",
-                            category=category,
-                            error=str(exc)[:500],
-                        )
-
-            # Handle existing group additions
-            existing_group_map = {g.id: g for g in existing_groups}
-            for addition in validated.existing_group_additions:
-                existing_group = existing_group_map.get(addition.group_id)
-                if not existing_group:
-                    log.warning("grouping_addition_unknown_group", group_id=addition.group_id)
-                    continue
-
-                new_member_articles = [
-                    article_map[aid] for aid in addition.article_ids if aid in article_map
-                ]
-                if not new_member_articles:
-                    continue
-
-                # Combine existing + new members for detail regeneration
-                existing_member_articles = [m.article for m in existing_group.members]
-                all_articles_for_detail = existing_member_articles + new_member_articles
-
-                try:
-                    articles_for_detail = [
-                        ArticleForDetail(id=a.id, title=a.title, extracted_text=a.extracted_text)
-                        for a in all_articles_for_detail
-                    ]
-                    detail_output = await self._pipeline.generate_detail(articles_for_detail)
-                except Exception as exc:
-                    log.error(
-                        "grouping_detail_regen_failed",
-                        group_id=addition.group_id,
-                        error=str(exc)[:500],
-                    )
-                    continue
-
-                async with AsyncSessionFactory() as session:
-                    try:
-                        db_group = await session.get(ArticleGroup, addition.group_id)
-                        if db_group is None:
-                            log.warning("grouping_group_not_found", group_id=addition.group_id)
                             continue
 
-                        for a in new_member_articles:
-                            session.add(ArticleGroupMember(group_id=db_group.id, article_id=a.id))
-
-                        db_group.title = detail_output.title
-                        db_group.summary = detail_output.summary
-                        db_group.detail = detail_output.detail
-                        db_group.llm_model = self._model
-
+                        session.add(ArticleGroupMember(group_id=existing_group.id, article_id=article_id))
+                        all_member_articles = [m.article for m in existing_group.members] + [article]
+                        most_recent_date = max(
+                            (a.published_at.date() for a in all_member_articles if a.published_at),
+                            default=target_date,
+                        )
+                        existing_group.grouped_date = most_recent_date
+                        existing_group.needs_regeneration = True
                         await session.commit()
                         groups_updated += 1
-                        articles_grouped += len(new_member_articles)
+                        articles_grouped += 1
                         log.info(
-                            "grouping_group_updated",
-                            group_id=addition.group_id,
-                            new_members=len(new_member_articles),
+                            "grouping_article_added_to_group",
+                            article_id=article_id,
+                            group_id=existing_group.id,
                         )
-                    except Exception as exc:
-                        await session.rollback()
-                        log.error(
-                            "grouping_group_update_failed",
-                            group_id=addition.group_id,
-                            error=str(exc)[:500],
+                    else:
+                        matched_article = article_map.get(matched_article_id)
+                        placeholder_title = article.title or f"Article group {article_id}"
+
+                        dates = [
+                            a.published_at.date()
+                            for a in [article, matched_article]
+                            if a is not None and a.published_at
+                        ]
+                        grouped_date = max(dates) if dates else target_date
+
+                        group = ArticleGroup(
+                            title=placeholder_title,
+                            summary="",
+                            detail="",
+                            category="",
+                            grouped_date=grouped_date,
+                            llm_model=None,
+                            token_usage=None,
+                            needs_regeneration=True,
                         )
+                        session.add(group)
+                        await session.flush()
+
+                        session.add(ArticleGroupMember(group_id=group.id, article_id=article_id))
+
+                        matched_already_grouped = await self._is_article_in_any_group(
+                            session, matched_article_id
+                        )
+                        if not matched_already_grouped:
+                            session.add(
+                                ArticleGroupMember(group_id=group.id, article_id=matched_article_id)
+                            )
+
+                        await session.commit()
+                        groups_created += 1
+                        articles_grouped += 1
+                        log.info(
+                            "grouping_new_group_created",
+                            group_id=group.id,
+                            article_id=article_id,
+                            matched_article_id=matched_article_id,
+                        )
+                except Exception as exc:
+                    await session.rollback()
+                    log.error(
+                        "grouping_persist_failed",
+                        article_id=article_id,
+                        error=str(exc)[:500],
+                    )
 
         log.info(
             "grouping_finished",
@@ -399,3 +279,62 @@ class GroupingService:
             articles_grouped=articles_grouped,
             date=target_date,
         )
+
+    async def run_regeneration(self) -> RegenerationResponse:
+        """Regenerate detail text for all groups with needs_regeneration=True."""
+        log.info("regeneration_started")
+        groups_regenerated = 0
+
+        async with AsyncSessionFactory() as session:
+            stmt = (
+                select(ArticleGroup)
+                .where(ArticleGroup.needs_regeneration.is_(True))
+                .options(selectinload(ArticleGroup.members).selectinload(ArticleGroupMember.article))
+            )
+            result = await session.execute(stmt)
+            flagged_groups = list(result.scalars().all())
+
+        log.info("regeneration_groups_found", count=len(flagged_groups))
+
+        for group in flagged_groups:
+            member_articles = [m.article for m in group.members if m.article is not None]
+            articles_with_text = [a for a in member_articles if a.extracted_text]
+
+            if not articles_with_text:
+                log.warning("regeneration_no_text", group_id=group.id)
+                continue
+
+            try:
+                articles_for_detail = [
+                    ArticleForDetail(id=a.id, title=a.title, extracted_text=a.extracted_text)
+                    for a in articles_with_text
+                ]
+                detail_output = await self._pipeline.generate_detail(articles_for_detail)
+            except Exception as exc:
+                log.error(
+                    "regeneration_detail_failed", group_id=group.id, error=str(exc)[:500]
+                )
+                continue
+
+            async with AsyncSessionFactory() as session:
+                try:
+                    db_group = await session.get(ArticleGroup, group.id)
+                    if db_group is None:
+                        log.warning("regeneration_group_not_found", group_id=group.id)
+                        continue
+                    db_group.title = detail_output.title
+                    db_group.summary = detail_output.summary
+                    db_group.detail = detail_output.detail
+                    db_group.llm_model = self._model
+                    db_group.needs_regeneration = False
+                    await session.commit()
+                    groups_regenerated += 1
+                    log.info("regeneration_group_done", group_id=group.id)
+                except Exception as exc:
+                    await session.rollback()
+                    log.error(
+                        "regeneration_persist_failed", group_id=group.id, error=str(exc)[:500]
+                    )
+
+        log.info("regeneration_finished", groups_regenerated=groups_regenerated)
+        return RegenerationResponse(groups_regenerated=groups_regenerated)

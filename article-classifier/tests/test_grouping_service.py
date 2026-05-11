@@ -1,4 +1,4 @@
-"""Property tests for grouping service logic.
+"""Property tests and unit tests for grouping service logic.
 
 Feature: article-grouping
 """
@@ -7,6 +7,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Optional
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from hypothesis import given, settings as h_settings
 from hypothesis import strategies as st
@@ -546,3 +547,289 @@ def test_truncation_result_is_subset_of_input(articles, max_articles):
         assert article.id in input_ids, (
             f"Article id={article.id} in result was not in the original input"
         )
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for the new RAG-based GroupingService
+# ---------------------------------------------------------------------------
+
+import pytest
+
+
+def _make_mock_article(article_id: int, text: str = "some text", title: str = "Title") -> MagicMock:
+    article = MagicMock()
+    article.id = article_id
+    article.extracted_text = text
+    article.title = title
+    article.published_at = datetime(2026, 5, 11, 10, 0)
+    return article
+
+
+def _make_mock_session() -> MagicMock:
+    """Create a mock session where sync methods are MagicMock and async are AsyncMock."""
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.flush = AsyncMock()
+    session.rollback = AsyncMock()
+    session.get = AsyncMock(return_value=None)
+    session.execute = AsyncMock()
+    return session
+
+
+def _make_session_factory(session: MagicMock) -> MagicMock:
+    """Return a mock that works as AsyncSessionFactory() context manager."""
+    mock_ctx = MagicMock()
+    mock_ctx.__aenter__ = AsyncMock(return_value=session)
+    mock_ctx.__aexit__ = AsyncMock(return_value=False)
+    return MagicMock(return_value=mock_ctx)
+
+
+def _make_service():
+    """Construct GroupingService with all external deps mocked out."""
+    with patch("src.grouping_service.AsyncQdrantClient"), \
+         patch("src.grouping_service.GroupingPipeline"):
+        from src.grouping_service import GroupingService
+        service = GroupingService()
+
+    service._embedding_client = AsyncMock()
+    service._similarity_service = AsyncMock()
+    service._similarity_service.ensure_collection = AsyncMock()
+    service._similarity_service.upsert_article = AsyncMock()
+    service._similarity_service.find_most_similar = AsyncMock(return_value=None)
+    service._pipeline = AsyncMock()
+    return service
+
+
+@pytest.mark.asyncio
+async def test_run_grouping_returns_zero_when_no_candidates():
+    """Grouping with no unindexed candidates returns zero stats."""
+    service = _make_service()
+
+    mock_session = _make_mock_session()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = []
+    mock_session.execute = AsyncMock(return_value=execute_result)
+
+    factory = _make_session_factory(mock_session)
+    with patch("src.grouping_service.AsyncSessionFactory", factory):
+        result = await service.run_grouping(date(2026, 5, 11))
+
+    assert result.groups_created == 0
+    assert result.groups_updated == 0
+    assert result.articles_grouped == 0
+    assert result.date == date(2026, 5, 11)
+
+
+@pytest.mark.asyncio
+async def test_run_grouping_skips_article_with_empty_extracted_text():
+    """Articles with empty extracted_text are skipped; embedding is never called."""
+    service = _make_service()
+    article = _make_mock_article(1, text="")
+
+    mock_session = _make_mock_session()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = [article]
+    mock_session.execute = AsyncMock(return_value=execute_result)
+
+    factory = _make_session_factory(mock_session)
+    with patch("src.grouping_service.AsyncSessionFactory", factory):
+        result = await service.run_grouping(date(2026, 5, 11))
+
+    service._embedding_client.embed_text.assert_not_called()
+    assert result.articles_grouped == 0
+
+
+@pytest.mark.asyncio
+async def test_run_grouping_skips_article_on_embedding_failure():
+    """Embedding failure for one article causes it to be skipped; processing continues."""
+    from src.embedding_client import EmbeddingError
+
+    service = _make_service()
+    article = _make_mock_article(1, text="good text")
+    service._embedding_client.embed_text = AsyncMock(side_effect=EmbeddingError("API error"))
+
+    mock_session = _make_mock_session()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = [article]
+    mock_session.execute = AsyncMock(return_value=execute_result)
+
+    factory = _make_session_factory(mock_session)
+    with patch("src.grouping_service.AsyncSessionFactory", factory):
+        result = await service.run_grouping(date(2026, 5, 11))
+
+    service._similarity_service.upsert_article.assert_not_called()
+    assert result.articles_grouped == 0
+
+
+@pytest.mark.asyncio
+async def test_run_grouping_below_threshold_leaves_article_standalone():
+    """An article whose best match is below the threshold is left ungrouped."""
+    service = _make_service()
+    article = _make_mock_article(1, text="some text")
+
+    service._embedding_client.embed_text = AsyncMock(return_value=[0.1, 0.2])
+    service._similarity_service.find_most_similar = AsyncMock(return_value=(99, 0.3))
+
+    mock_session = _make_mock_session()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = [article]
+    mock_session.execute = AsyncMock(return_value=execute_result)
+
+    factory = _make_session_factory(mock_session)
+    with patch("src.grouping_service.AsyncSessionFactory", factory), \
+         patch("src.grouping_service.settings") as mock_settings:
+        mock_settings.GROUPING_SIMILARITY_THRESHOLD = 0.75
+        mock_settings.EMBEDDING_API_URL = "http://test"
+        mock_settings.OPENROUTER_API_KEY = "key"
+        mock_settings.EMBEDDING_MODEL = "test-model"
+        mock_settings.QDRANT_URL = "http://qdrant"
+        mock_settings.QDRANT_API_KEY = None
+        mock_settings.QDRANT_FULL_ARTICLE_COLLECTION = "article_full"
+        mock_settings.GROUPING_LLM_MODEL = None
+        mock_settings.LLM_MODEL = "gpt"
+        result = await service.run_grouping(date(2026, 5, 11))
+
+    assert result.groups_created == 0
+    assert result.groups_updated == 0
+
+
+@pytest.mark.asyncio
+async def test_run_grouping_creates_new_group_when_match_is_ungrouped():
+    """When match is above threshold and ungrouped, a new group is created with both articles."""
+    service = _make_service()
+    article = _make_mock_article(1, text="some text")
+
+    service._embedding_client.embed_text = AsyncMock(return_value=[0.1, 0.2])
+    service._similarity_service.find_most_similar = AsyncMock(return_value=(99, 0.9))
+
+    mock_session = _make_mock_session()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = [article]
+    mock_session.execute = AsyncMock(return_value=execute_result)
+
+    with patch.object(service, "_get_group_for_article", AsyncMock(return_value=None)), \
+         patch.object(service, "_is_article_in_any_group", AsyncMock(return_value=False)):
+        factory = _make_session_factory(mock_session)
+        with patch("src.grouping_service.AsyncSessionFactory", factory), \
+             patch("src.grouping_service.settings") as mock_settings:
+            mock_settings.GROUPING_SIMILARITY_THRESHOLD = 0.75
+            mock_settings.EMBEDDING_API_URL = "http://test"
+            mock_settings.OPENROUTER_API_KEY = "key"
+            mock_settings.EMBEDDING_MODEL = "test-model"
+            mock_settings.QDRANT_URL = "http://qdrant"
+            mock_settings.QDRANT_API_KEY = None
+            mock_settings.QDRANT_FULL_ARTICLE_COLLECTION = "article_full"
+            mock_settings.GROUPING_LLM_MODEL = None
+            mock_settings.LLM_MODEL = "gpt"
+            result = await service.run_grouping(date(2026, 5, 11))
+
+    assert result.groups_created == 1
+    assert result.articles_grouped == 1
+
+
+@pytest.mark.asyncio
+async def test_run_grouping_adds_article_to_existing_group():
+    """When match is in an existing group, the article is added to that group."""
+    service = _make_service()
+    article = _make_mock_article(2, text="some text")
+
+    service._embedding_client.embed_text = AsyncMock(return_value=[0.5, 0.5])
+    service._similarity_service.find_most_similar = AsyncMock(return_value=(1, 0.95))
+
+    mock_group = MagicMock()
+    mock_group.id = 42
+    mock_group.members = []  # No existing members with same article_id
+    mock_group.grouped_date = date(2026, 5, 11)
+    mock_group.needs_regeneration = False
+
+    mock_session = _make_mock_session()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = [article]
+    mock_session.execute = AsyncMock(return_value=execute_result)
+
+    with patch.object(service, "_get_group_for_article", AsyncMock(return_value=mock_group)):
+        factory = _make_session_factory(mock_session)
+        with patch("src.grouping_service.AsyncSessionFactory", factory), \
+             patch("src.grouping_service.settings") as mock_settings:
+            mock_settings.GROUPING_SIMILARITY_THRESHOLD = 0.75
+            mock_settings.EMBEDDING_API_URL = "http://test"
+            mock_settings.OPENROUTER_API_KEY = "key"
+            mock_settings.EMBEDDING_MODEL = "test-model"
+            mock_settings.QDRANT_URL = "http://qdrant"
+            mock_settings.QDRANT_API_KEY = None
+            mock_settings.QDRANT_FULL_ARTICLE_COLLECTION = "article_full"
+            mock_settings.GROUPING_LLM_MODEL = None
+            mock_settings.LLM_MODEL = "gpt"
+            result = await service.run_grouping(date(2026, 5, 11))
+
+    assert result.groups_updated == 1
+    assert result.articles_grouped == 1
+    assert mock_group.needs_regeneration is True
+
+
+@pytest.mark.asyncio
+async def test_run_regeneration_processes_flagged_groups():
+    """run_regeneration calls generate_detail for groups with needs_regeneration=True."""
+    from src.grouping_schemas import GroupDetailOutput
+
+    service = _make_service()
+
+    mock_article = _make_mock_article(10, text="article text")
+    mock_member = MagicMock()
+    mock_member.article = mock_article
+
+    mock_group = MagicMock()
+    mock_group.id = 1
+    mock_group.members = [mock_member]
+
+    service._pipeline.generate_detail = AsyncMock(
+        return_value=GroupDetailOutput(title="T", summary="S", detail="D")
+    )
+
+    mock_session = _make_mock_session()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = [mock_group]
+    mock_session.execute = AsyncMock(return_value=execute_result)
+
+    mock_db_group = MagicMock()
+    mock_db_group.id = 1
+    mock_db_group.needs_regeneration = True
+    mock_session.get = AsyncMock(return_value=mock_db_group)
+
+    factory = _make_session_factory(mock_session)
+    with patch("src.grouping_service.AsyncSessionFactory", factory):
+        result = await service.run_regeneration()
+
+    service._pipeline.generate_detail.assert_called_once()
+    assert mock_db_group.needs_regeneration is False
+    assert mock_db_group.title == "T"
+    assert result.groups_regenerated == 1
+
+
+@pytest.mark.asyncio
+async def test_run_regeneration_leaves_flag_set_on_llm_failure():
+    """When generate_detail raises, needs_regeneration is NOT cleared."""
+    service = _make_service()
+
+    mock_article = _make_mock_article(10, text="article text")
+    mock_member = MagicMock()
+    mock_member.article = mock_article
+
+    mock_group = MagicMock()
+    mock_group.id = 1
+    mock_group.members = [mock_member]
+
+    service._pipeline.generate_detail = AsyncMock(side_effect=RuntimeError("LLM error"))
+
+    mock_session = _make_mock_session()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = [mock_group]
+    mock_session.execute = AsyncMock(return_value=execute_result)
+
+    factory = _make_session_factory(mock_session)
+    with patch("src.grouping_service.AsyncSessionFactory", factory):
+        result = await service.run_regeneration()
+
+    # group was NOT updated since generate_detail failed
+    mock_session.get.assert_not_called()
+    assert result.groups_regenerated == 0

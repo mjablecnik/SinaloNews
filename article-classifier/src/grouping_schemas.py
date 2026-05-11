@@ -163,3 +163,7 @@ class GroupingTriggerResponse(BaseModel):
     groups_updated: int
     articles_grouped: int
     date: date
+
+
+class RegenerationResponse(BaseModel):
+    groups_regenerated: int

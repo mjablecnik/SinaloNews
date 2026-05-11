@@ -37,8 +37,8 @@ Replace LLM-based article clustering with vector similarity-based grouping using
 - [x] 3. Checkpoint - Ensure models are correct
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. EmbeddingClient
-  - [ ] 4.1 Create `article-classifier/src/embedding_client.py`
+- [x] 4. EmbeddingClient
+  - [x] 4.1 Create `article-classifier/src/embedding_client.py`
     - Reuse pattern from `rag-agent/src/embeddings.py`
     - Implement `EmbeddingError` exception class
     - Implement `EmbeddingClient` with `__init__(api_url, api_key, model)`
@@ -47,14 +47,14 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - Use `httpx.AsyncClient` with 60s timeout, Bearer auth, sorted response by index
     - _Requirements: 2.2, 2.5_
 
-  - [ ]* 4.2 Write unit tests for EmbeddingClient in `article-classifier/tests/test_embedding_client.py`
+  - [x]* 4.2 Write unit tests for EmbeddingClient in `article-classifier/tests/test_embedding_client.py`
     - Mock httpx responses, verify correct API call format
     - Test error handling (HTTP errors, request errors)
     - Test empty input returns empty list
     - _Requirements: 2.2, 2.5_
 
-- [ ] 5. SimilarityService
-  - [ ] 5.1 Create `article-classifier/src/similarity_service.py`
+- [x] 5. SimilarityService
+  - [x] 5.1 Create `article-classifier/src/similarity_service.py`
     - Implement `SimilarityService` with `__init__(qdrant_client, settings)`
     - Implement `ensure_collection(vector_size=1536)` — create collection if not exists with cosine distance
     - Implement `upsert_article(article_id, vector, metadata)` — upsert single point with deterministic UUID5 ID
@@ -62,15 +62,15 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - Implement static `make_point_id(article_id) -> str` using `uuid.uuid5` with fixed namespace
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 3.1, 3.2_
 
-  - [ ]* 5.2 Write unit tests for SimilarityService in `article-classifier/tests/test_similarity_service.py`
+  - [x]* 5.2 Write unit tests for SimilarityService in `article-classifier/tests/test_similarity_service.py`
     - Mock Qdrant client, verify upsert/query calls
     - Test deterministic point ID generation
     - Test self-exclusion filter in find_most_similar
     - Test None return when no results
     - _Requirements: 1.5, 3.2_
 
-- [ ] 6. Rewrite GroupingService
-  - [ ] 6.1 Rewrite `article-classifier/src/grouping_service.py` to use vector similarity
+- [x] 6. Rewrite GroupingService
+  - [x] 6.1 Rewrite `article-classifier/src/grouping_service.py` to use vector similarity
     - Replace LLM clustering with: fetch candidates → embed → upsert → similarity search → group decisions
     - Add `EmbeddingClient` and `SimilarityService` as dependencies
     - Retain `GroupingPipeline` reference only for `generate_detail()` (used in regeneration)
@@ -86,7 +86,7 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - Respect existing unique constraint on `article_group_members.article_id`
     - _Requirements: 1.3, 1.4, 1.5, 1.6, 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10, 7.4, 7.5, 7.6, 9.1_
 
-  - [ ] 6.2 Implement `run_regeneration()` method in `GroupingService`
+  - [x] 6.2 Implement `run_regeneration()` method in `GroupingService`
     - Fetch all groups where `needs_regeneration = True`
     - For each group, load member articles with `extracted_text`
     - Call `GroupingPipeline.generate_detail()` with member articles
@@ -96,7 +96,7 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - Return `RegenerationResponse` with count of groups regenerated
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9_
 
-  - [ ]* 6.3 Write unit tests for GroupingService in `article-classifier/tests/test_grouping_service.py`
+  - [x]* 6.3 Write unit tests for GroupingService in `article-classifier/tests/test_grouping_service.py`
     - Test candidate selection (only classified, unindexed articles)
     - Test sequential processing (article C joins group created by A+B)
     - Test threshold logic (above → group, below → standalone)
