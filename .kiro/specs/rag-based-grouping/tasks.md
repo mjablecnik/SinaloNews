@@ -184,8 +184,8 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - **Property 10: Threshold validation rejects values outside [0.0, 1.0]**
     - **Validates: Requirements 5.2**
 
-- [ ] 11. Environment files and documentation
-  - [ ] 11.1 Update `article-classifier/.env.example` with new environment variables
+- [x] 11. Environment files and documentation
+  - [x] 11.1 Update `article-classifier/.env.example` with new environment variables
     - Add `QDRANT_URL=http://localhost:6333`
     - Add `QDRANT_API_KEY=your-qdrant-api-key` (optional)
     - Add `QDRANT_FULL_ARTICLE_COLLECTION=article_full`
@@ -195,11 +195,11 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - Remove `GROUPING_VALIDATE_CLUSTERS` entry
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-  - [ ] 11.2 Update `article-classifier/.env` with new environment variables
+  - [x] 11.2 Update `article-classifier/.env` with new environment variables
     - Add same variables as `.env.example` with appropriate values for the development environment
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-  - [ ] 11.3 Update project README with new grouping approach documentation
+  - [x] 11.3 Update project README with new grouping approach documentation
     - Describe RAG-based similarity grouping approach (embed → query → threshold → group)
     - Document new configuration variables
     - Document the two-step workflow: `POST /api/groups/generate` for similarity matching, `POST /api/groups/regenerate` for detail generation

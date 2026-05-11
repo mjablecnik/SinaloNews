@@ -1,6 +1,6 @@
 # Article Classifier
 
-A FastAPI microservice that classifies articles using LLM (LangGraph/LangChain + OpenRouter). It reads unprocessed articles from the shared PostgreSQL database, generates hierarchical topic tags, assigns a content type and importance score, and produces a Czech-language summary.
+A FastAPI microservice that classifies articles using LLM (LangGraph/LangChain + OpenRouter). It reads unprocessed articles from the shared PostgreSQL database, generates hierarchical topic tags, assigns a content type and importance score, and produces a Czech-language summary. Related articles are grouped together using RAG-based vector similarity.
 
 ## Requirements
 
@@ -128,6 +128,48 @@ sh scripts/classifier.sh articles --min-score=8 --json
 sh scripts/classifier.sh health
 ```
 
+## Article Grouping
+
+The classifier groups related articles using RAG-based vector similarity rather than LLM clustering. This is a two-step process:
+
+### Step 1: Similarity Matching (`POST /api/groups/generate`)
+
+1. Fetches classified articles that haven't been indexed yet
+2. Embeds each article's full text using `openai/text-embedding-3-small` via OpenRouter
+3. Stores the embedding in a Qdrant collection (`article_full`)
+4. Queries Qdrant for the most similar existing article
+5. If similarity score >= threshold: adds the article to an existing group or creates a new group
+6. If similarity score < threshold: the article remains standalone
+
+```sh
+sh scripts/classifier.sh group --date=2026-05-07
+```
+
+### Step 2: Detail Generation (`POST /api/groups/regenerate`)
+
+Groups created or modified during similarity matching are flagged with `needs_regeneration`. The regenerate endpoint processes these groups:
+
+1. Fetches all groups with `needs_regeneration = true`
+2. Generates a Czech-language title, summary, and combined detail article using LLM
+3. Clears the `needs_regeneration` flag on success
+
+```sh
+sh scripts/classifier.sh regenerate
+```
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GROUPING_SIMILARITY_THRESHOLD` | `0.75` | Minimum cosine similarity (0.0–1.0) for grouping |
+| `QDRANT_URL` | `http://localhost:6333` | Qdrant server URL |
+| `QDRANT_API_KEY` | — | Qdrant API key (optional) |
+| `QDRANT_FULL_ARTICLE_COLLECTION` | `article_full` | Qdrant collection name |
+| `EMBEDDING_MODEL` | `openai/text-embedding-3-small` | Embedding model via OpenRouter |
+| `EMBEDDING_API_URL` | `https://openrouter.ai/api/v1` | Embedding API endpoint |
+
+Higher threshold values produce fewer, tighter groups (only very similar articles). Lower values produce more, broader groups.
+
 ## Environment Variables
 
 | Variable                  | Required | Default               | Description                          |
@@ -139,6 +181,12 @@ sh scripts/classifier.sh health
 | `BATCH_SIZE`              | No       | `20`                  | Articles per classification batch    |
 | `LLM_RETRY_DELAY_SECONDS` | No       | `5`                   | Delay between LLM retries (seconds)  |
 | `LLM_MAX_RETRIES`         | No       | `3`                   | Maximum LLM retry attempts           |
+| `GROUPING_SIMILARITY_THRESHOLD` | No | `0.75`               | Cosine similarity threshold for grouping |
+| `QDRANT_URL`              | No       | `http://localhost:6333` | Qdrant server URL                  |
+| `QDRANT_API_KEY`          | No       | —                     | Qdrant API key                       |
+| `QDRANT_FULL_ARTICLE_COLLECTION` | No | `article_full`       | Qdrant collection name               |
+| `EMBEDDING_MODEL`         | No       | `openai/text-embedding-3-small` | Embedding model         |
+| `EMBEDDING_API_URL`       | No       | `https://openrouter.ai/api/v1` | Embedding API endpoint   |
 | `LANGSMITH_API_KEY`       | No       | —                     | LangSmith API key for tracing        |
 | `LANGSMITH_PROJECT`       | No       | `sinalo-classifier`   | LangSmith project name               |
 | `LANGSMITH_TRACING`       | No       | `true`                | Enable LangSmith tracing             |

@@ -35,7 +35,7 @@ rss-feed (port 8000)         article-classifier (port 8002)       article-reader
 | Service | Tech Stack | Port | Fly.io App | Description |
 |---------|-----------|------|------------|-------------|
 | [rss-feed](rss-feed/README.md) | Python, FastAPI | 8000 | `sinalo-feed` | RSS/Atom feed discovery, parsing, and article text extraction |
-| [article-classifier](article-classifier/README.md) | Python, FastAPI, LangGraph | 8002 | `sinalo-classifier` | LLM-based article classification, tagging, summarization, and grouping |
+| [article-classifier](article-classifier/README.md) | Python, FastAPI, LangGraph, Qdrant | 8002 | `sinalo-classifier` | LLM-based article classification, tagging, summarization, and RAG-based grouping |
 | [rag-agent](rag-agent/README.md) | Python, FastAPI, LangGraph, Qdrant | 8001 | `sinalo-rag-agent` | RAG-based question answering over collected articles |
 | [article-reader](article-reader/README.md) | SvelteKit, TypeScript, Tailwind | 3000 | `sinalo-reader` | Web UI for browsing, reading, and saving classified articles |
 
@@ -43,7 +43,7 @@ rss-feed (port 8000)         article-classifier (port 8002)       article-reader
 
 1. **rss-feed** discovers feeds on registered websites, parses entries, and extracts article text into PostgreSQL
 2. **article-classifier** reads unprocessed articles, classifies them with LLM (tags, importance, summary), writes results back
-3. **article-classifier** groups related articles within the same category by topic and generates consolidated summaries
+3. **article-classifier** groups related articles using vector similarity (Qdrant) and generates consolidated summaries via LLM
 4. **article-reader** fetches classified articles and groups from the classifier API and displays them in a web UI
 5. **rag-agent** indexes articles into Qdrant and answers natural language questions with source citations
 
@@ -72,6 +72,7 @@ sh rss-feed/scripts/feed-parser.sh add mysite https://example.com
 sh rss-feed/scripts/feed-parser.sh run --all
 sh article-classifier/scripts/classifier.sh classify
 sh article-classifier/scripts/classifier.sh group --date=2026-05-07
+sh article-classifier/scripts/classifier.sh regenerate
 sh rag-agent/scripts/rag-agent.sh query "What happened in AI today?"
 ```
 
@@ -169,7 +170,9 @@ Shared required variables:
 - `OPENROUTER_API_KEY` — OpenRouter API key (classifier, rag-agent)
 
 Service-specific variables:
-- `QDRANT_URL` / `QDRANT_API_KEY` — Qdrant vector store connection (rag-agent)
+- `QDRANT_URL` / `QDRANT_API_KEY` — Qdrant vector store connection (rag-agent, article-classifier)
+- `GROUPING_SIMILARITY_THRESHOLD` — Cosine similarity threshold for article grouping (article-classifier)
+- `EMBEDDING_MODEL` / `EMBEDDING_API_URL` — Embedding configuration for article grouping (article-classifier)
 - `PUBLIC_ARTICLE_API_URL` — Classifier API URL for the frontend (article-reader)
 - `LANGSMITH_API_KEY` — Optional LangSmith tracing (classifier, rag-agent)
 
