@@ -75,7 +75,8 @@ Commands:
   classify              Trigger classification of unprocessed articles
   status                Show classification processing status
   articles [options]    List classified articles with filters
-  group [options]       Trigger grouping for articles (default: today)
+  group [options]       Trigger similarity-based grouping for articles (default: today)
+  regenerate            Regenerate AI detail text for flagged groups
   groups [options]      List article groups with filters
   group-detail <id>     Show full group detail with member articles
   health                Check service health
@@ -161,7 +162,7 @@ EOF
 Usage: classifier group [options]
 
 Trigger the grouping pipeline for a given date. Groups classified articles
-by topic within each category and generates consolidated AI summaries.
+by topic using vector similarity and marks groups for detail regeneration.
 
 Options:
   --date=YYYY-MM-DD     Target date (default: today)
@@ -171,6 +172,21 @@ Examples:
   classifier group
   classifier group --date=2026-05-07
   classifier group --json
+EOF
+;;
+        regenerate) cat <<'EOF'
+Usage: classifier regenerate [options]
+
+Regenerate AI-generated title, summary, and detail text for all article groups
+that are flagged with needs_regeneration=true. Groups are flagged automatically
+after similarity-based grouping creates or modifies them.
+
+Options:
+  --json                Raw JSON output
+
+Examples:
+  classifier regenerate
+  classifier regenerate --json
 EOF
 ;;
         groups) cat <<'EOF'
@@ -323,6 +339,20 @@ cmd_group() {
     fi
 }
 
+cmd_regenerate() {
+    for arg in "$@"; do
+        case "$arg" in
+            --json)     JSON_OUTPUT=1 ;;
+            --help|-h)  usage_cmd regenerate; exit 0 ;;
+            -*)         die "Unknown flag: $arg" ;;
+        esac
+    done
+    api_request POST "/api/groups/regenerate"
+    if [ "$JSON_OUTPUT" = "1" ]; then out_json; else
+        out_fmt '"Groups regenerated: \(.groups_regenerated)"'
+    fi
+}
+
 cmd_groups() {
     _category=""; _date=""; _page=""; _size=""
     for arg in "$@"; do
@@ -419,6 +449,7 @@ case "$cmd" in
     status)       eval "cmd_status $args" ;;
     articles)     eval "cmd_articles $args" ;;
     group)        eval "cmd_group $args" ;;
+    regenerate)   eval "cmd_regenerate $args" ;;
     groups)       eval "cmd_groups $args" ;;
     group-detail) eval "cmd_group_detail $args" ;;
     health)       eval "cmd_health $args" ;;

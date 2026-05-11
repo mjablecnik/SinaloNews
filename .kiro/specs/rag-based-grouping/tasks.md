@@ -120,22 +120,22 @@ Replace LLM-based article clustering with vector similarity-based grouping using
 - [x] 8. Checkpoint - Ensure core logic is correct
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Routes and schemas
-  - [ ] 9.1 Add `RegenerationResponse` schema to `article-classifier/src/grouping_schemas.py`
+- [x] 9. Routes and schemas
+  - [x] 9.1 Add `RegenerationResponse` schema to `article-classifier/src/grouping_schemas.py`
     - Add `RegenerationResponse(BaseModel)` with `groups_regenerated: int`
     - _Requirements: 4.1, 4.8_
 
-  - [ ] 9.2 Add `POST /api/groups/regenerate` endpoint to `article-classifier/src/routes.py`
+  - [x] 9.2 Add `POST /api/groups/regenerate` endpoint to `article-classifier/src/routes.py`
     - Call `GroupingService.run_regeneration()`
     - Return `RegenerationResponse`
     - _Requirements: 4.1, 4.8_
 
-  - [ ] 9.3 Update `POST /api/groups/generate` endpoint to use new grouping logic
+  - [x] 9.3 Update `POST /api/groups/generate` endpoint to use new grouping logic
     - Verify it calls the rewritten `GroupingService.run_grouping()` (should work without changes since the method signature is preserved)
     - Ensure the endpoint does NOT trigger detail generation (only similarity matching)
     - _Requirements: 7.1, 7.4, 7.6_
 
-  - [ ] 9.4 Add `regenerate` command to `article-classifier/scripts/classifier.sh`
+  - [x] 9.4 Add `regenerate` command to `article-classifier/scripts/classifier.sh`
     - Add `cmd_regenerate` function that calls `POST /api/groups/regenerate`
     - Display `groups_regenerated` count in formatted output
     - Add `--json` flag support

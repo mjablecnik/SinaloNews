@@ -23,6 +23,7 @@ from src.grouping_schemas import (
     GroupMemberResponse,
     GroupSummaryResponse,
     GroupingTriggerResponse,
+    RegenerationResponse,
 )
 from src.grouping_service import GroupingService
 from src.models import Article, ArticleGroup, ArticleGroupMember, ArticleTag, ClassificationResult, Tag
@@ -462,6 +463,13 @@ async def generate_groups(
     service: GroupingService = Depends(get_grouping_service),
 ) -> GroupingTriggerResponse:
     return await service.run_grouping(target_date=target_date)
+
+
+@router.post("/api/groups/regenerate", response_model=RegenerationResponse)
+async def regenerate_groups(
+    service: GroupingService = Depends(get_grouping_service),
+) -> RegenerationResponse:
+    return await service.run_regeneration()
 
 
 @router.get("/api/groups", response_model=GroupListResponse)
