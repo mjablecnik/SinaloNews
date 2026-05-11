@@ -117,7 +117,7 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - Keep `_call_with_retry()` helper (used by detail generation)
     - _Requirements: 9.3, 9.4_
 
-- [ ] 8. Checkpoint - Ensure core logic is correct
+- [x] 8. Checkpoint - Ensure core logic is correct
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Routes and schemas
