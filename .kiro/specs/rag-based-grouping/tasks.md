@@ -104,8 +104,8 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - Test regeneration processes only flagged groups
     - _Requirements: 2.1, 3.4, 3.5, 3.6, 4.1, 4.6_
 
-- [ ] 7. Simplify GroupingPipeline
-  - [ ] 7.1 Remove clustering and validation methods from `article-classifier/src/grouping_pipeline.py`
+- [x] 7. Simplify GroupingPipeline
+  - [x] 7.1 Remove clustering and validation methods from `article-classifier/src/grouping_pipeline.py`
     - Remove `cluster()` method and `_cluster_node`
     - Remove `validate_cluster()` method
     - Remove `_ClusteringState` type

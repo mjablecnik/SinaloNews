@@ -1,5 +1,4 @@
 import asyncio
-from dataclasses import dataclass
 
 import structlog
 from langchain_openai import ChatOpenAI
@@ -7,12 +6,7 @@ from langgraph.graph import END, START, StateGraph
 from typing_extensions import TypedDict
 
 from src.grouping_schemas import (
-    ArticleForClustering,
     ArticleForDetail,
-    ClusteringLLMResponse,
-    ClusteringOutput,
-    ClusterValidationLLMResponse,
-    ExistingGroupForClustering,
     GroupDetailLLMResponse,
     GroupDetailOutput,
 )
@@ -23,73 +17,12 @@ log = structlog.get_logger()
 # --- State types for LangGraph ---
 
 
-class _ClusteringState(TypedDict):
-    articles: list[ArticleForClustering]
-    existing_groups: list[ExistingGroupForClustering]
-    result: ClusteringOutput | None
-
-
 class _DetailState(TypedDict):
     member_articles: list[ArticleForDetail]
     result: GroupDetailOutput | None
 
 
 # --- Prompt builders ---
-
-_CLUSTERING_SYSTEM_PROMPT = (
-    "You are an expert news analyst. Your task is to identify clusters of news articles "
-    "that cover the exact same specific topic, event, or story from different sources. "
-    "Group articles only when they report on the same concrete thing — the same incident, "
-    "announcement, decision, or event. Do NOT group articles merely because they share "
-    "a broad category or theme. Return your analysis as structured JSON."
-)
-
-
-def _build_clustering_prompt(
-    articles: list[ArticleForClustering],
-    existing_groups: list[ExistingGroupForClustering],
-) -> str:
-    sections = []
-
-    if existing_groups:
-        sections.append("## Existing Groups (already formed for this date and category)")
-        for g in existing_groups:
-            sections.append(
-                f"- Group ID {g.group_id}: {g.title}\n  Summary: {g.summary}"
-            )
-        sections.append("")
-
-    sections.append("## Articles to Analyze")
-    for a in articles:
-        title = a.title or "(no title)"
-        url = a.source_url or "(unknown source)"
-        sections.append(f"### Article ID {a.id}")
-        sections.append(f"Title: {title}")
-        sections.append(f"Source: {url}")
-        sections.append(f"Summary: {a.summary}")
-        sections.append("")
-
-    instructions = [
-        "## Instructions",
-        "Analyze the articles above and return a JSON object with:",
-        "- `groups`: list of NEW groups to create. Each group must have at least 2 articles. "
-        "Include `article_ids`, a brief `topic` description, and `justification`.",
-        "- `existing_group_additions`: list of additions to EXISTING groups. "
-        "Only include if new articles clearly belong to an existing group (by group_id). "
-        "Include the `group_id` and `article_ids` to add.",
-        "- `standalone_ids`: list of article IDs that do not clearly match any other article "
-        "or existing group topic.",
-        "",
-        "Rules:",
-        "- Each article ID must appear in exactly ONE of: groups, existing_group_additions, or standalone_ids.",
-        "- A group requires at least 2 articles — never create a single-article group.",
-        "- Only group articles covering the SAME SPECIFIC event/incident/announcement, "
-        "not just the same broad topic.",
-    ]
-    sections.extend(instructions)
-
-    return "\n".join(sections)
-
 
 _DETAIL_SYSTEM_PROMPT = (
     "You are a professional Czech journalist. Your task is to write a consolidated news article "
@@ -139,24 +72,10 @@ class GroupingPipeline:
                 "X-Title": "Article Classifier",
             },
         )
-        self._clustering_llm = self._llm.with_structured_output(
-            ClusteringLLMResponse, include_raw=True
-        )
         self._detail_llm = self._llm.with_structured_output(
             GroupDetailLLMResponse, include_raw=True
         )
-        self._validation_llm = self._llm.with_structured_output(
-            ClusterValidationLLMResponse, include_raw=True
-        )
-        self._clustering_graph = self._build_clustering_graph()
         self._detail_graph = self._build_detail_graph()
-
-    def _build_clustering_graph(self):
-        graph = StateGraph(_ClusteringState)
-        graph.add_node("cluster", self._cluster_node)
-        graph.add_edge(START, "cluster")
-        graph.add_edge("cluster", END)
-        return graph.compile()
 
     def _build_detail_graph(self):
         graph = StateGraph(_DetailState)
@@ -188,31 +107,6 @@ class GroupingPipeline:
                 await asyncio.sleep(self._settings.LLM_RETRY_DELAY_SECONDS)
         raise RuntimeError("Unreachable")  # pragma: no cover
 
-    async def _cluster_node(self, state: _ClusteringState) -> dict:
-        user_prompt = _build_clustering_prompt(state["articles"], state["existing_groups"])
-        messages = [
-            {"role": "system", "content": _CLUSTERING_SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ]
-
-        raw_result = await self._call_with_retry(self._clustering_llm, messages)
-        parsed: ClusteringLLMResponse = raw_result["parsed"]
-
-        result = ClusteringOutput(
-            groups=parsed.groups,
-            existing_group_additions=parsed.existing_group_additions,
-            standalone_ids=parsed.standalone_ids,
-        )
-
-        log.info(
-            "clustering_complete",
-            new_groups=len(parsed.groups),
-            existing_additions=len(parsed.existing_group_additions),
-            standalone=len(parsed.standalone_ids),
-        )
-
-        return {"result": result}
-
     async def _detail_node(self, state: _DetailState) -> dict:
         user_prompt = _build_detail_prompt(state["member_articles"])
         messages = [
@@ -233,23 +127,6 @@ class GroupingPipeline:
 
         return {"result": result}
 
-    async def cluster(
-        self,
-        articles: list[ArticleForClustering],
-        existing_groups: list[ExistingGroupForClustering],
-    ) -> ClusteringOutput:
-        """Single LLM call per category. Returns clusters + standalone IDs."""
-        initial_state: _ClusteringState = {
-            "articles": articles,
-            "existing_groups": existing_groups,
-            "result": None,
-        }
-        final_state = await self._clustering_graph.ainvoke(initial_state)
-        result: ClusteringOutput | None = final_state["result"]
-        if result is None:
-            raise RuntimeError("Clustering pipeline returned no result")
-        return result
-
     async def generate_detail(
         self,
         member_articles: list[ArticleForDetail],
@@ -264,56 +141,3 @@ class GroupingPipeline:
         if result is None:
             raise RuntimeError("Detail generation pipeline returned no result")
         return result
-
-    async def validate_cluster(
-        self,
-        topic: str,
-        articles: list[ArticleForClustering],
-    ) -> list[int]:
-        """Validate a single cluster. Returns list of article IDs that truly belong together."""
-        prompt_parts = [
-            f"## Proposed Group Topic: {topic}",
-            "",
-            "## Articles in this group:",
-        ]
-        for a in articles:
-            title = a.title or "(no title)"
-            prompt_parts.append(f"- Article ID {a.id}: {title}")
-            prompt_parts.append(f"  Summary: {a.summary}")
-            prompt_parts.append("")
-
-        prompt_parts.extend([
-            "## Task",
-            "Review the articles above. They were grouped together under the topic above.",
-            "Determine which articles TRULY report on the SAME SPECIFIC event/incident/announcement.",
-            "Remove any article that does NOT belong — it may be about a similar theme but a DIFFERENT event.",
-            "",
-            "Return a JSON object with:",
-            "- `valid_article_ids`: IDs of articles that genuinely belong together",
-            "- `removed_article_ids`: IDs of articles that do NOT belong in this group",
-            "- `reason`: Brief explanation of why articles were removed (or 'All articles valid' if none removed)",
-        ])
-
-        messages = [
-            {"role": "system", "content": (
-                "You are a strict news editor validating article clusters. "
-                "Your job is to remove articles that do NOT belong in a group. "
-                "Articles must report on the EXACT SAME specific event — same WHO, WHAT, WHERE. "
-                "Be strict: when in doubt, remove the article from the group."
-            )},
-            {"role": "user", "content": "\n".join(prompt_parts)},
-        ]
-
-        raw_result = await self._call_with_retry(self._validation_llm, messages)
-        parsed: ClusterValidationLLMResponse = raw_result["parsed"]
-
-        log.info(
-            "cluster_validation_complete",
-            topic=topic[:60],
-            original_count=len(articles),
-            valid_count=len(parsed.valid_article_ids),
-            removed_count=len(parsed.removed_article_ids),
-            reason=parsed.reason[:100] if parsed.reason else "",
-        )
-
-        return parsed.valid_article_ids
