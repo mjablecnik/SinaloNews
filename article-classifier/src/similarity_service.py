@@ -41,18 +41,18 @@ class SimilarityService:
         all_excluded = list(exclude_ids or []) + [article_id]
         exclude_point_ids = [self.make_point_id(aid) for aid in all_excluded]
 
-        results = await self._client.search(
+        response = await self._client.query_points(
             collection_name=self._collection,
-            query_vector=vector,
+            query=vector,
             query_filter=Filter(must_not=[HasIdCondition(has_id=exclude_point_ids)]),
             limit=1,
             with_payload=True,
         )
 
-        if not results:
+        if not response.points:
             return None
 
-        best = results[0]
+        best = response.points[0]
         matched_article_id = best.payload["article_id"]
         return (matched_article_id, best.score)
 
