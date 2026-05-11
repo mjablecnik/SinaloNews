@@ -205,7 +205,7 @@ Replace LLM-based article clustering with vector similarity-based grouping using
     - Document the two-step workflow: `POST /api/groups/generate` for similarity matching, `POST /api/groups/regenerate` for detail generation
     - _Requirements: 10.1, 10.2, 10.3_
 
-- [ ] 12. Final checkpoint - Ensure all tests pass
+- [x] 12. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
