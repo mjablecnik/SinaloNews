@@ -6,35 +6,35 @@ Replace LLM-based article clustering with vector similarity-based grouping using
 
 ## Tasks
 
-- [ ] 1. Configuration and dependencies
-  - [ ] 1.1 Add Qdrant, embedding, and threshold settings to `article-classifier/src/config.py`
+- [x] 1. Configuration and dependencies
+  - [x] 1.1 Add Qdrant, embedding, and threshold settings to `article-classifier/src/config.py`
     - Add `QDRANT_URL` (default: `http://localhost:6333`), `QDRANT_API_KEY` (optional), `QDRANT_FULL_ARTICLE_COLLECTION` (default: `article_full`)
     - Add `EMBEDDING_MODEL` (default: `openai/text-embedding-3-small`), `EMBEDDING_API_URL` (default: `https://openrouter.ai/api/v1`)
     - Add `GROUPING_SIMILARITY_THRESHOLD` with `Field(ge=0.0, le=1.0)` validation (default: 0.75)
     - Remove `GROUPING_VALIDATE_CLUSTERS` setting (no longer needed)
     - _Requirements: 5.1, 5.2, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-  - [ ] 1.2 Add `qdrant-client` and `httpx` to project dependencies via `uv`
+  - [x] 1.2 Add `qdrant-client` and `httpx` to project dependencies via `uv`
     - Run `uv add qdrant-client httpx` in the `article-classifier/` directory
     - Verify `httpx` is not already present (it may be a transitive dependency)
     - _Requirements: 1.1, 2.2_
 
-- [ ] 2. Database migration and model updates
-  - [ ] 2.1 Add `needs_regeneration` column to `ArticleGroup` model in `article-classifier/src/models.py`
+- [x] 2. Database migration and model updates
+  - [x] 2.1 Add `needs_regeneration` column to `ArticleGroup` model in `article-classifier/src/models.py`
     - Add `needs_regeneration: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)`
     - Import `Boolean` from sqlalchemy
     - _Requirements: 3.10, 4.6_
 
-  - [ ] 2.2 Add `FullArticleIndexed` model to `article-classifier/src/models.py`
+  - [x] 2.2 Add `FullArticleIndexed` model to `article-classifier/src/models.py`
     - Create model with `article_id` (PK, FK to articles with CASCADE delete) and `indexed_at` (DateTime, default now)
     - _Requirements: 2.4_
 
-  - [ ] 2.3 Create SQL migration script at `article-classifier/scripts/migration_rag_grouping.sql`
+  - [x] 2.3 Create SQL migration script at `article-classifier/scripts/migration_rag_grouping.sql`
     - Add `needs_regeneration BOOLEAN NOT NULL DEFAULT false` to `article_groups`
     - Create `full_article_indexed` table with `article_id` (PK, FK) and `indexed_at`
     - _Requirements: 2.4, 3.10_
 
-- [ ] 3. Checkpoint - Ensure models are correct
+- [x] 3. Checkpoint - Ensure models are correct
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. EmbeddingClient

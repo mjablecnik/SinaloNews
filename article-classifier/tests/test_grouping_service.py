@@ -198,6 +198,7 @@ _articles_strategy = st.lists(
     st.integers(min_value=1, max_value=500).flatmap(_article_strategy),
     min_size=0,
     max_size=30,
+    unique_by=lambda a: a.id,
 )
 
 
