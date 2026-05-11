@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,7 +30,18 @@ class Settings(BaseSettings):
     GROUPING_MIN_ARTICLES: int = 2
     GROUPING_MAX_ARTICLES_PER_CATEGORY: int = 50
     GROUPING_MIN_SCORE: int = 0  # Only group articles with importance_score >= this value
-    GROUPING_VALIDATE_CLUSTERS: bool = True  # Validate each cluster with a separate LLM call
+
+    # Qdrant
+    QDRANT_URL: str = "http://localhost:6333"
+    QDRANT_API_KEY: str | None = None
+    QDRANT_FULL_ARTICLE_COLLECTION: str = "article_full"
+
+    # Embedding
+    EMBEDDING_MODEL: str = "openai/text-embedding-3-small"
+    EMBEDDING_API_URL: str = "https://openrouter.ai/api/v1"
+
+    # Grouping similarity threshold
+    GROUPING_SIMILARITY_THRESHOLD: float = Field(default=0.75, ge=0.0, le=1.0)
 
 
 settings = Settings()
