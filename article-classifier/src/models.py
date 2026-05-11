@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -107,6 +108,7 @@ class ArticleGroup(Base):
     grouped_date: Mapped[date] = mapped_column(Date, nullable=False)
     llm_model: Mapped[str | None] = mapped_column(String(200))
     token_usage: Mapped[int | None] = mapped_column(Integer)
+    needs_regeneration: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
@@ -133,3 +135,12 @@ class ArticleGroupMember(Base):
 
     group: Mapped["ArticleGroup"] = relationship(back_populates="members")
     article: Mapped["Article"] = relationship(back_populates="group_member")
+
+
+class FullArticleIndexed(Base):
+    __tablename__ = "full_article_indexed"
+
+    article_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True
+    )
+    indexed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=func.now())
