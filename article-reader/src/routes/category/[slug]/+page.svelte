@@ -52,7 +52,24 @@
 		loadError = null;
 	});
 
-	let selectedDate = $state<string | null>(null);
+	// Persist selected date in sessionStorage so it survives article/group detail navigation
+	const FILTER_KEY = `article-reader:date-filter:${data.category}`;
+
+	function loadSavedDate(): string | null {
+		if (typeof sessionStorage === 'undefined') return null;
+		return sessionStorage.getItem(FILTER_KEY);
+	}
+
+	function saveDateFilter(date: string | null) {
+		if (typeof sessionStorage === 'undefined') return;
+		if (date === null) {
+			sessionStorage.removeItem(FILTER_KEY);
+		} else {
+			sessionStorage.setItem(FILTER_KEY, date);
+		}
+	}
+
+	let selectedDate = $state<string | null>(loadSavedDate());
 
 	let visibleItems = $derived(filterReadItems(allItems, $readState, $groupReadState, $sessionReadSet));
 
@@ -85,6 +102,7 @@
 
 	async function selectDate(date: string | null) {
 		selectedDate = date;
+		saveDateFilter(date);
 		isLoadingDate = true;
 		loadError = null;
 		try {
@@ -125,6 +143,13 @@
 	let sentinelEl: HTMLDivElement | undefined = $state();
 
 	onMount(() => {
+		// If a saved date filter exists, re-fetch with that filter
+		// (initial load from +page.ts always loads "All")
+		const saved = loadSavedDate();
+		if (saved !== null) {
+			selectDate(saved);
+		}
+
 		if (!sentinelEl) return;
 		const observer = new IntersectionObserver(
 			(entries) => {
@@ -151,6 +176,8 @@
 			const id = parseInt(groupMatch[1]);
 			sessionReadSet.add('group', id);
 		} else {
+			// Navigating away from category (e.g., back to home) — clear saved filter
+			saveDateFilter(null);
 			sessionReadSet.clear();
 		}
 	});
