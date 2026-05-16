@@ -7,12 +7,13 @@
 	import { settings } from '$lib/stores/settings';
 	import { getFeed } from '$lib/api';
 	import { buildDateFrom } from '$lib/utils';
+	import { getCachedFeed, setCachedFeed, clearFeedCache } from '$lib/stores/feedCache';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
 	import GroupCard from '$lib/components/GroupCard.svelte';
 	import DateFilter from '$lib/components/DateFilter.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import { sortByImportance, formatDateOnly, filterReadItems } from '$lib/utils';
+	import { sortByImportance, filterReadItems } from '$lib/utils';
 	import type { ArticleSummary, FeedItem } from '$lib/types';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
@@ -43,18 +44,8 @@
 	let isLoadingDate = $state(false);
 	let loadError = $state<string | null>(null);
 
-	// Reset when data changes (e.g., navigation to different category)
-	$effect(() => {
-		allItems = [...data.items];
-		currentPage = data.currentPage;
-		totalPages = data.totalPages;
-		totalCount = data.totalCount;
-		loadError = null;
-	});
-
-	// Persist selected date and loaded page count in sessionStorage
+	// Persist selected date in sessionStorage
 	const FILTER_KEY = `article-reader:date-filter:${data.category}`;
-	const PAGE_KEY = `article-reader:loaded-page:${data.category}`;
 
 	function loadSavedDate(): string | null {
 		if (typeof sessionStorage === 'undefined') return null;
@@ -70,23 +61,54 @@
 		}
 	}
 
-	function loadSavedPage(): number {
-		if (typeof sessionStorage === 'undefined') return 1;
-		const val = sessionStorage.getItem(PAGE_KEY);
-		return val ? parseInt(val) : 1;
-	}
-
-	function saveCurrentPage(page: number) {
-		if (typeof sessionStorage === 'undefined') return;
-		sessionStorage.setItem(PAGE_KEY, String(page));
-	}
-
-	function clearPageState() {
-		if (typeof sessionStorage === 'undefined') return;
-		sessionStorage.removeItem(PAGE_KEY);
-	}
-
 	let selectedDate = $state<string | null>(loadSavedDate());
+
+	// Save current state to in-memory cache
+	function saveToCache() {
+		setCachedFeed(data.category, selectedDate, {
+			items: allItems,
+			currentPage,
+			totalPages,
+			totalCount,
+			selectedDate
+		});
+	}
+
+	// Try to restore from cache on mount
+	onMount(() => {
+		const savedDate = loadSavedDate();
+		const cached = getCachedFeed(data.category, savedDate);
+
+		if (cached) {
+			// Restore from in-memory cache — no network requests needed
+			allItems = cached.items;
+			currentPage = cached.currentPage;
+			totalPages = cached.totalPages;
+			totalCount = cached.totalCount;
+			selectedDate = cached.selectedDate;
+		} else if (savedDate !== null) {
+			// Date filter saved but no cache — fetch for that date
+			selectDate(savedDate);
+		} else {
+			// No cache, no saved date — use data from +page.ts (already set by $effect)
+			allItems = [...data.items];
+			currentPage = data.currentPage;
+			totalPages = data.totalPages;
+			totalCount = data.totalCount;
+		}
+
+		if (!sentinelEl) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+					loadMore();
+				}
+			},
+			{ rootMargin: '200px' }
+		);
+		observer.observe(sentinelEl);
+		return () => observer.disconnect();
+	});
 
 	let visibleItems = $derived(filterReadItems(allItems, $readState, $groupReadState, $sessionReadSet));
 
@@ -120,7 +142,17 @@
 	async function selectDate(date: string | null) {
 		selectedDate = date;
 		saveDateFilter(date);
-		clearPageState();
+
+		// Check cache first
+		const cached = getCachedFeed(data.category, date);
+		if (cached) {
+			allItems = cached.items;
+			currentPage = cached.currentPage;
+			totalPages = cached.totalPages;
+			totalCount = cached.totalCount;
+			return;
+		}
+
 		isLoadingDate = true;
 		loadError = null;
 		try {
@@ -129,6 +161,7 @@
 			currentPage = 1;
 			totalPages = response.pages;
 			totalCount = response.total;
+			saveToCache();
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : 'Failed to load items';
 			allItems = [];
@@ -150,7 +183,7 @@
 			allItems = [...allItems, ...response.items];
 			currentPage = nextPage;
 			totalPages = response.pages;
-			saveCurrentPage(nextPage);
+			saveToCache();
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : 'Failed to load more items';
 		} finally {
@@ -158,56 +191,8 @@
 		}
 	}
 
-	// Infinite scroll: observe a sentinel element near the bottom
+	// Infinite scroll sentinel
 	let sentinelEl: HTMLDivElement | undefined = $state();
-
-	onMount(() => {
-		// Restore saved state (date filter + loaded pages)
-		const savedDate = loadSavedDate();
-		const savedPage = loadSavedPage();
-
-		async function restoreState() {
-			if (savedDate !== null || savedPage > 1) {
-				// Need to re-fetch: either a date filter is active or we had loaded multiple pages
-				selectedDate = savedDate;
-				isLoadingDate = true;
-				try {
-					const targetPage = savedPage > 1 ? savedPage : 1;
-					// Fetch all pages up to the saved page sequentially
-					const firstResponse = await getFeed(buildFeedParams(1));
-					let items = [...firstResponse.items];
-					totalPages = firstResponse.pages;
-					totalCount = firstResponse.total;
-
-					for (let p = 2; p <= Math.min(targetPage, firstResponse.pages); p++) {
-						const response = await getFeed(buildFeedParams(p));
-						items = [...items, ...response.items];
-					}
-
-					allItems = items;
-					currentPage = Math.min(targetPage, firstResponse.pages);
-				} catch (e) {
-					loadError = e instanceof Error ? e.message : 'Failed to restore items';
-				} finally {
-					isLoadingDate = false;
-				}
-			}
-		}
-
-		restoreState();
-
-		if (!sentinelEl) return;
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
-					loadMore();
-				}
-			},
-			{ rootMargin: '200px' }
-		);
-		observer.observe(sentinelEl);
-		return () => observer.disconnect();
-	});
 
 	beforeNavigate(({ to }) => {
 		const path = to?.url.pathname ?? '';
@@ -218,13 +203,17 @@
 			const id = parseInt(articleMatch[1]);
 			readState.markAsRead(id);
 			sessionReadSet.add('article', id);
+			// Save to cache before leaving
+			saveToCache();
 		} else if (groupMatch) {
 			const id = parseInt(groupMatch[1]);
 			sessionReadSet.add('group', id);
+			// Save to cache before leaving
+			saveToCache();
 		} else {
-			// Navigating away from category (e.g., back to home) — clear saved filter and page
+			// Navigating away from category — clear cache and filters
 			saveDateFilter(null);
-			clearPageState();
+			clearFeedCache(data.category);
 			sessionReadSet.clear();
 		}
 	});
