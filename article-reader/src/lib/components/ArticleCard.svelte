@@ -4,10 +4,13 @@
 	import type { ArticleSummary } from '$lib/types';
 	import { sanitizeSummary, formatDateTime } from '$lib/utils';
 
-	const renderer = new marked.Renderer();
-	renderer.link = ({ href, text }) => {
-		return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">${text}</a>`;
-	};
+	marked.use({
+		renderer: {
+			link({ href, text }) {
+				return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">${text}</a>`;
+			}
+		}
+	});
 
 	interface Props {
 		article: ArticleSummary;
@@ -31,7 +34,7 @@
 	}
 
 	let summaryHtml = $derived(
-		article.summary ? (marked(sanitizeSummary(article.summary), { renderer }) as string) : ''
+		article.summary ? (marked.parse(sanitizeSummary(article.summary)) as string) : ''
 	);
 </script>
 

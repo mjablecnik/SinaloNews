@@ -92,14 +92,4 @@
 			</button>
 		{/if}
 	</div>
-
-	{#if group.tags && group.tags.length > 0}
-		<div class="flex flex-wrap gap-1">
-			{#each uniqueTags(group.tags).slice(0, 5) as tag}
-				<span class="rounded-full bg-purple-50 px-2 py-0.5 text-xs text-purple-600">
-					{tag.subcategory || tag.category}
-				</span>
-			{/each}
-		</div>
-	{/if}
 </button>
