@@ -126,7 +126,9 @@ export function filterReadItems(
 ): FeedItem[] {
 	return items.filter((item) => {
 		const key = `${item.type}:${item.id}`;
+		// Items clicked during this session stay visible
 		if (sessionReadSet.has(key)) return true;
+		// Hide permanently read items
 		if (item.type === 'article' && readArticleIds.includes(item.id)) return false;
 		if (item.type === 'group' && readGroupIds.includes(item.id)) return false;
 		return true;

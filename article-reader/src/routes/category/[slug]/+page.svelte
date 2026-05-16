@@ -173,16 +173,29 @@
 		}
 	}
 
+	function isItemAlreadyLoaded(item: FeedItem): boolean {
+		return allItems.some((existing) => existing.type === item.type && existing.id === item.id);
+	}
+
 	async function loadMore() {
 		if (isLoadingMore || !hasMore) return;
 		isLoadingMore = true;
 		loadError = null;
 		try {
-			const nextPage = currentPage + 1;
-			const response = await getFeed(buildFeedParams(nextPage));
-			allItems = [...allItems, ...response.items];
-			currentPage = nextPage;
-			totalPages = response.pages;
+			let newItems: FeedItem[] = [];
+			let page = currentPage;
+
+			// Keep fetching pages until we get items not already in the list, or run out of pages
+			while (newItems.length === 0 && page < totalPages) {
+				page++;
+				const response = await getFeed(buildFeedParams(page));
+				const fresh = response.items.filter((item) => !isItemAlreadyLoaded(item));
+				newItems = [...newItems, ...fresh];
+				allItems = [...allItems, ...fresh];
+				currentPage = page;
+				totalPages = response.pages;
+			}
+
 			saveToCache();
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : 'Failed to load more items';
