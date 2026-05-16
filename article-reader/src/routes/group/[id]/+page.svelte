@@ -27,6 +27,19 @@
 			return '';
 		}
 	}
+
+	// Accordion state for source summaries
+	let expandedSources = $state(new Set<number>());
+
+	function toggleSummary(index: number) {
+		const next = new Set(expandedSources);
+		if (next.has(index)) {
+			next.delete(index);
+		} else {
+			next.add(index);
+		}
+		expandedSources = next;
+	}
 </script>
 
 <main class="container mx-auto max-w-2xl px-4 py-8">
@@ -74,30 +87,55 @@
 					Sources ({group.member_count})
 				</h2>
 				<ul class="space-y-2">
-					{#each group.members as member}
-						<li>
-							<a
-								href="/article/{member.id}"
-								class="block rounded-lg border border-gray-200 p-3 transition-colors"
-							>
-								<p class="font-medium text-gray-900 text-sm leading-snug">
-									{member.title ?? 'Untitled'}
-								</p>
-								<div class="mt-1 flex flex-wrap gap-2 text-xs text-gray-500">
-									{#if member.author}
-										<span>{member.author}</span>
-									{/if}
-									{#if getSource(member.url)}
-										<span>{getSource(member.url)}</span>
-									{/if}
-									{#if member.published_at}
-										<span>{formatDateTime(member.published_at)}</span>
-									{/if}
-									<span class="rounded bg-gray-100 px-1 font-medium text-gray-600">
-										{member.importance_score}/10
-									</span>
+					{#each group.members as member, i}
+						<li class="rounded-lg border border-gray-200 overflow-hidden">
+							<div class="flex items-center gap-2 p-3">
+								<a
+									href="/article/{member.id}"
+									class="flex-1 min-w-0"
+								>
+									<p class="font-medium text-gray-900 text-sm leading-snug">
+										{member.title ?? 'Untitled'}
+									</p>
+									<div class="mt-1 flex flex-wrap gap-2 text-xs text-gray-500">
+										{#if member.author}
+											<span>{member.author}</span>
+										{/if}
+										{#if getSource(member.url)}
+											<span>{getSource(member.url)}</span>
+										{/if}
+										{#if member.published_at}
+											<span>{formatDateTime(member.published_at)}</span>
+										{/if}
+										<span class="rounded bg-gray-100 px-1 font-medium text-gray-600">
+											{member.importance_score}/10
+										</span>
+									</div>
+								</a>
+								{#if member.summary}
+									<button
+										onclick={() => toggleSummary(i)}
+										class="shrink-0 rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+										title={expandedSources.has(i) ? 'Hide summary' : 'Show summary'}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											class="h-4 w-4 transition-transform {expandedSources.has(i) ? 'rotate-180' : ''}"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+											stroke-width="2"
+										>
+											<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+										</svg>
+									</button>
+								{/if}
+							</div>
+							{#if member.summary && expandedSources.has(i)}
+								<div class="border-t border-gray-100 bg-gray-50 px-3 py-2">
+									<MarkdownRenderer content={member.summary} />
 								</div>
-							</a>
+							{/if}
 						</li>
 					{/each}
 				</ul>
