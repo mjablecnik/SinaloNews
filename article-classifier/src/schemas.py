@@ -80,3 +80,9 @@ class CategoriesResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     database: str
+
+
+class CleanupResponse(BaseModel):
+    deleted_articles: int
+    deleted_groups: int
+    before_date: str

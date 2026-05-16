@@ -34,6 +34,7 @@ from src.schemas import (
     ClassifiedArticleResponse,
     ClassifyStatusResponse,
     ClassifyTriggerResponse,
+    CleanupResponse,
     HealthResponse,
     PaginatedResponse,
     TagResponse,
@@ -752,6 +753,99 @@ async def get_feed(
     pages = math.ceil(total / size) if total > 0 else 0
     offset = (page - 1) * size
     return FeedResponse(items=all_items[offset:offset + size], total=total, page=page, size=size, pages=pages)
+
+
+@router.delete("/api/articles/cleanup", response_model=CleanupResponse)
+async def cleanup_old_articles(
+    before: date = Query(..., description="Delete articles published before this date"),
+    session: AsyncSession = Depends(get_session),
+) -> CleanupResponse:
+    """Delete articles (and their related data) published before the given date."""
+    from datetime import timedelta
+    from src.models import FullArticleIndexed
+
+    # Safety check: refuse to delete articles from the last 30 days
+    min_allowed_date = date.today() - timedelta(days=30)
+    if before > min_allowed_date:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete articles newer than 30 days. Earliest allowed 'before' date is {min_allowed_date}.",
+        )
+
+    # Find articles to delete
+    article_ids_stmt = (
+        select(Article.id).where(func.date(Article.published_at) < before)
+    )
+    article_ids = list((await session.execute(article_ids_stmt)).scalars().all())
+
+    if not article_ids:
+        return CleanupResponse(deleted_articles=0, deleted_groups=0, before_date=str(before))
+
+    # Delete full_article_indexed entries
+    from sqlalchemy import delete as sa_delete
+
+    await session.execute(
+        sa_delete(FullArticleIndexed).where(FullArticleIndexed.article_id.in_(article_ids))
+    )
+
+    # Find classification_result IDs for these articles
+    cr_ids_stmt = select(ClassificationResult.id).where(
+        ClassificationResult.article_id.in_(article_ids)
+    )
+    cr_ids = list((await session.execute(cr_ids_stmt)).scalars().all())
+
+    # Delete article_tags (cascade from classification_results)
+    if cr_ids:
+        await session.execute(
+            sa_delete(ArticleTag).where(ArticleTag.classification_result_id.in_(cr_ids))
+        )
+
+    # Delete classification_results
+    if cr_ids:
+        await session.execute(
+            sa_delete(ClassificationResult).where(ClassificationResult.id.in_(cr_ids))
+        )
+
+    # Delete article_group_members and track affected groups
+    affected_group_ids_stmt = select(ArticleGroupMember.group_id).where(
+        ArticleGroupMember.article_id.in_(article_ids)
+    )
+    affected_group_ids = list((await session.execute(affected_group_ids_stmt)).scalars().all())
+
+    await session.execute(
+        sa_delete(ArticleGroupMember).where(ArticleGroupMember.article_id.in_(article_ids))
+    )
+
+    # Delete groups that have no remaining members
+    deleted_groups = 0
+    if affected_group_ids:
+        for group_id in set(affected_group_ids):
+            remaining = (await session.execute(
+                select(func.count()).where(ArticleGroupMember.group_id == group_id)
+            )).scalar() or 0
+            if remaining == 0:
+                await session.execute(
+                    sa_delete(ArticleGroup).where(ArticleGroup.id == group_id)
+                )
+                deleted_groups += 1
+
+    # Delete articles
+    await session.execute(
+        sa_delete(Article).where(Article.id.in_(article_ids))
+    )
+
+    await session.commit()
+
+    # Clear cache since data changed
+    _cache.clear()
+
+    log.info("cleanup_complete", deleted_articles=len(article_ids), deleted_groups=deleted_groups, before=str(before))
+
+    return CleanupResponse(
+        deleted_articles=len(article_ids),
+        deleted_groups=deleted_groups,
+        before_date=str(before),
+    )
 
 
 @router.get("/health", response_model=HealthResponse)
