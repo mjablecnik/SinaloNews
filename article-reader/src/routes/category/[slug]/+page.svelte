@@ -184,9 +184,10 @@
 		try {
 			let newItems: FeedItem[] = [];
 			let page = currentPage;
+			const minNewItems = 20;
 
-			// Keep fetching pages until we get items not already in the list, or run out of pages
-			while (newItems.length === 0 && page < totalPages) {
+			// Keep fetching pages until we accumulate enough new items or run out of pages
+			while (newItems.length < minNewItems && page < totalPages) {
 				page++;
 				const response = await getFeed(buildFeedParams(page));
 				const fresh = response.items.filter((item) => !isItemAlreadyLoaded(item));
