@@ -29,6 +29,8 @@ from src.grouping_service import GroupingService
 from src.models import Article, ArticleGroup, ArticleGroupMember, ArticleTag, ClassificationResult, Tag
 from src.schemas import (
     ArticleDetailResponse,
+    CategoriesResponse,
+    CategoryCountResponse,
     ClassifiedArticleResponse,
     ClassifyStatusResponse,
     ClassifyTriggerResponse,
@@ -375,6 +377,59 @@ async def get_articles(
     pages = math.ceil(total / size) if total > 0 else 0
 
     result = PaginatedResponse(items=items, total=total, page=page, size=size, pages=pages)
+    _cache_set(key, result)
+    return result
+
+
+@router.get("/api/categories", response_model=CategoriesResponse)
+async def get_categories(
+    min_score: int | None = Query(None, ge=0, le=10),
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    session: AsyncSession = Depends(get_session),
+) -> CategoriesResponse:
+    """Return category names with article counts (lightweight, no full article data)."""
+    cache_params = {"min_score": min_score, "date_from": date_from, "date_to": date_to}
+    key = _cache_key("categories", cache_params)
+    cached = _cache_get(key)
+    if cached is not None:
+        return cached  # type: ignore[return-value]
+
+    from sqlalchemy.orm import aliased
+
+    ParentTag = aliased(Tag)
+
+    stmt = (
+        select(
+            ParentTag.name.label("category_name"),
+            func.count(func.distinct(Article.id)).label("article_count"),
+        )
+        .select_from(ArticleTag)
+        .join(Tag, Tag.id == ArticleTag.tag_id)
+        .join(ParentTag, ParentTag.id == Tag.parent_id)
+        .join(ClassificationResult, ClassificationResult.id == ArticleTag.classification_result_id)
+        .join(Article, Article.id == ClassificationResult.article_id)
+    )
+
+    filters = []
+    if min_score is not None:
+        filters.append(ClassificationResult.importance_score >= min_score)
+    if date_from is not None:
+        filters.append(func.date(Article.published_at) >= date_from)
+    if date_to is not None:
+        filters.append(func.date(Article.published_at) <= date_to)
+
+    if filters:
+        stmt = stmt.where(and_(*filters))
+
+    stmt = stmt.group_by(ParentTag.name).order_by(func.count(func.distinct(Article.id)).desc())
+
+    rows = (await session.execute(stmt)).all()
+
+    categories = [CategoryCountResponse(category=row.category_name, count=row.article_count) for row in rows]
+    total = sum(c.count for c in categories)
+
+    result = CategoriesResponse(categories=categories, total=total)
     _cache_set(key, result)
     return result
 

@@ -65,6 +65,16 @@ class ClassifyStatusResponse(BaseModel):
     classified: int
 
 
+class CategoryCountResponse(BaseModel):
+    category: str
+    count: int
+
+
+class CategoriesResponse(BaseModel):
+    categories: list[CategoryCountResponse]
+    total: int
+
+
 class HealthResponse(BaseModel):
     status: str
     database: str
