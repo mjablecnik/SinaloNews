@@ -1,6 +1,5 @@
 import type { PageLoad } from './$types';
 import { getFeed } from '$lib/api';
-import { buildDateFrom } from '$lib/utils';
 import { get } from 'svelte/store';
 import { settings } from '$lib/stores/settings';
 import type { FeedItem } from '$lib/types';
@@ -12,10 +11,12 @@ export const load: PageLoad = async ({ params, depends }) => {
 	const isAllInOne = category === '__all__';
 	try {
 		const pageSize = 30;
+		const today = new Date().toISOString().split('T')[0];
 		const feedParams = {
 			...(isAllInOne ? {} : { category }),
 			min_score: s.minScore,
-			date_from: buildDateFrom(s.daysBack),
+			date_from: today,
+			date_to: today,
 			page: 1,
 			size: pageSize
 		};

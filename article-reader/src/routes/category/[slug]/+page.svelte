@@ -12,7 +12,7 @@
 	import DateFilter from '$lib/components/DateFilter.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import { extractUniqueDates, getTodayDateString, sortByImportance, formatDateOnly, filterReadItems } from '$lib/utils';
+	import { sortByImportance, formatDateOnly, filterReadItems } from '$lib/utils';
 	import type { ArticleSummary, FeedItem } from '$lib/types';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
@@ -21,11 +21,26 @@
 
 	const isAllInOne = $derived(data.category === '__all__');
 
+	// Generate all date buttons from daysBack setting
+	let dates = $derived.by(() => {
+		const s = get(settings);
+		const days: string[] = [];
+		const today = new Date();
+		for (let i = 0; i < s.daysBack; i++) {
+			const d = new Date(today);
+			d.setDate(today.getDate() - i);
+			days.push(d.toISOString().split('T')[0]);
+		}
+		return days;
+	});
+
 	// Pagination state
 	let allItems = $state<FeedItem[]>([]);
 	let currentPage = $state(1);
 	let totalPages = $state(0);
+	let totalCount = $state(0);
 	let isLoadingMore = $state(false);
+	let isLoadingDate = $state(false);
 	let loadError = $state<string | null>(null);
 
 	// Reset when data changes (e.g., navigation to different category)
@@ -33,24 +48,15 @@
 		allItems = [...data.items];
 		currentPage = data.currentPage;
 		totalPages = data.totalPages;
+		totalCount = data.totalCount;
 		loadError = null;
 	});
 
-	let selectedDate = $state<string | null>(getTodayDateString());
-
-	let dates = $derived(extractUniqueDates(allItems));
+	let selectedDate = $state<string | null>(new Date().toISOString().split('T')[0]);
 
 	let visibleItems = $derived(filterReadItems(allItems, $readState, $groupReadState, $sessionReadSet));
 
-	let filteredItems = $derived.by(() => {
-		const sorted = sortByImportance(visibleItems);
-		if (!selectedDate) return sorted;
-		return sorted.filter((item) => {
-			const dateStr = item.published_at ?? item.grouped_date;
-			if (!dateStr) return false;
-			return formatDateOnly(dateStr) === selectedDate;
-		});
-	});
+	let filteredItems = $derived(sortByImportance(visibleItems));
 
 	let unreadCount = $derived(
 		filteredItems.filter((item) => {
@@ -65,21 +71,46 @@
 
 	let hasMore = $derived(currentPage < totalPages);
 
+	function buildFeedParams(page: number) {
+		const s = get(settings);
+		return {
+			...(isAllInOne ? {} : { category: data.category }),
+			min_score: s.minScore,
+			date_from: selectedDate ?? buildDateFrom(s.daysBack),
+			...(selectedDate ? { date_to: selectedDate } : {}),
+			page,
+			size: data.pageSize
+		};
+	}
+
+	async function selectDate(date: string | null) {
+		selectedDate = date;
+		isLoadingDate = true;
+		loadError = null;
+		try {
+			const response = await getFeed(buildFeedParams(1));
+			allItems = [...response.items];
+			currentPage = 1;
+			totalPages = response.pages;
+			totalCount = response.total;
+		} catch (e) {
+			loadError = e instanceof Error ? e.message : 'Failed to load items';
+			allItems = [];
+			currentPage = 1;
+			totalPages = 0;
+			totalCount = 0;
+		} finally {
+			isLoadingDate = false;
+		}
+	}
+
 	async function loadMore() {
 		if (isLoadingMore || !hasMore) return;
 		isLoadingMore = true;
 		loadError = null;
 		try {
-			const s = get(settings);
 			const nextPage = currentPage + 1;
-			const feedParams = {
-				...(isAllInOne ? {} : { category: data.category }),
-				min_score: s.minScore,
-				date_from: buildDateFrom(s.daysBack),
-				page: nextPage,
-				size: data.pageSize
-			};
-			const response = await getFeed(feedParams);
+			const response = await getFeed(buildFeedParams(nextPage));
 			allItems = [...allItems, ...response.items];
 			currentPage = nextPage;
 			totalPages = response.pages;
@@ -142,14 +173,14 @@
 	{#if data.error}
 		<ErrorMessage message={data.error} onRetry={() => location.reload()} />
 	{:else}
-		{#if dates.length > 0}
-			<div class="mb-4">
-				<DateFilter {dates} selected={selectedDate} onSelect={(d) => { selectedDate = d; }} />
-				<p class="mt-2 text-xs text-gray-500">{unreadCount} unread · {data.totalCount} total</p>
-			</div>
-		{/if}
+		<div class="mb-4">
+			<DateFilter {dates} selected={selectedDate} onSelect={selectDate} />
+			<p class="mt-2 text-xs text-gray-500">{unreadCount} unread · {totalCount} total</p>
+		</div>
 
-		{#if filteredItems.length === 0 && !isLoadingMore}
+		{#if isLoadingDate}
+			<LoadingSpinner />
+		{:else if filteredItems.length === 0 && !isLoadingMore}
 			<p class="py-12 text-center text-gray-500">
 				{selectedDate ? 'No articles for this date.' : 'No articles found.'}
 			</p>
