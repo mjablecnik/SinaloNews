@@ -81,11 +81,11 @@
 							isRead={$readState.includes(item.id)}
 						/>
 						<button
-							onclick={() => savedItems.removeArticle(item.id)}
-							class="absolute right-2 top-2 rounded px-2 py-0.5 text-xs text-gray-400 hover:bg-gray-100 hover:text-red-500"
+							onclick={(e) => { e.stopPropagation(); savedItems.removeArticle(item.id); }}
+							class="absolute right-2 top-2 z-10 rounded bg-white/80 px-2 py-0.5 text-xs text-red-400 shadow-sm hover:bg-red-50 hover:text-red-600"
 							title="Remove from saved"
 						>
-							✕
+							✕ Remove
 						</button>
 					</div>
 				{:else}
@@ -95,11 +95,11 @@
 							isRead={$groupReadState.includes(item.id)}
 						/>
 						<button
-							onclick={() => savedItems.removeGroup(item.id)}
-							class="absolute right-2 top-2 rounded px-2 py-0.5 text-xs text-gray-400 hover:bg-gray-100 hover:text-red-500"
+							onclick={(e) => { e.stopPropagation(); savedItems.removeGroup(item.id); }}
+							class="absolute right-2 top-2 z-10 rounded bg-white/80 px-2 py-0.5 text-xs text-red-400 shadow-sm hover:bg-red-50 hover:text-red-600"
 							title="Remove from saved"
 						>
-							✕
+							✕ Remove
 						</button>
 					</div>
 				{/if}
