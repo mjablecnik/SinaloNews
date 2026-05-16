@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { marked } from 'marked';
 	import type { FeedItem, Tag } from '$lib/types';
-	import { formatDateTime } from '$lib/utils';
+	import { sanitizeSummary, formatDateTime } from '$lib/utils';
 
 	interface Props {
 		group: FeedItem;
@@ -11,19 +12,13 @@
 
 	let { group, isRead = false, onMarkRead }: Props = $props();
 
-	function uniqueTags(tags: Tag[]): Tag[] {
-		const seen = new Set<string>();
-		return tags.filter((tag) => {
-			const key = `${tag.category}:${tag.subcategory}`;
-			if (seen.has(key)) return false;
-			seen.add(key);
-			return true;
-		});
-	}
-
 	function navigate() {
 		goto(`/group/${group.id}`);
 	}
+
+	let summaryHtml = $derived(
+		group.summary ? (marked.parse(sanitizeSummary(group.summary)) as string) : ''
+	);
 </script>
 
 <button
@@ -66,8 +61,10 @@
 		</p>
 	</div>
 
-	{#if group.summary}
-		<p class="text-sm leading-relaxed text-gray-700 line-clamp-3">{group.summary}</p>
+	{#if summaryHtml}
+		<div class="prose prose-sm max-w-none text-gray-700 line-clamp-3">
+			{@html summaryHtml}
+		</div>
 	{/if}
 
 	<div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">

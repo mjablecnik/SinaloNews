@@ -56,7 +56,7 @@
 			<section class="mb-6">
 				<h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Summary</h2>
 				<div class="rounded-lg bg-gray-50 p-4">
-					<p class="text-gray-700">{group.summary}</p>
+					<MarkdownRenderer content={group.summary} />
 				</div>
 			</section>
 
