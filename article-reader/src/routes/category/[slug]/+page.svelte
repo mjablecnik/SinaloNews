@@ -177,21 +177,30 @@
 		return allItems.some((existing) => existing.type === item.type && existing.id === item.id);
 	}
 
+	function isItemRead(item: FeedItem): boolean {
+		const readArticles = get(readState);
+		const readGroups = get(groupReadState);
+		if (item.type === 'article' && readArticles.includes(item.id)) return true;
+		if (item.type === 'group' && readGroups.includes(item.id)) return true;
+		return false;
+	}
+
 	async function loadMore() {
 		if (isLoadingMore || !hasMore) return;
 		isLoadingMore = true;
 		loadError = null;
 		try {
-			let newItems: FeedItem[] = [];
+			let visibleNewCount = 0;
 			let page = currentPage;
-			const minNewItems = 20;
+			const minVisibleItems = 20;
 
-			// Keep fetching pages until we accumulate enough new items or run out of pages
-			while (newItems.length < minNewItems && page < totalPages) {
+			// Keep fetching pages until we accumulate enough visible (unread + not duplicate) items
+			while (visibleNewCount < minVisibleItems && page < totalPages) {
 				page++;
 				const response = await getFeed(buildFeedParams(page));
 				const fresh = response.items.filter((item) => !isItemAlreadyLoaded(item));
-				newItems = [...newItems, ...fresh];
+				const visibleFresh = fresh.filter((item) => !isItemRead(item));
+				visibleNewCount += visibleFresh.length;
 				allItems = [...allItems, ...fresh];
 				currentPage = page;
 				totalPages = response.pages;
