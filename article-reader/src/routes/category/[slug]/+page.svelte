@@ -52,8 +52,9 @@
 		loadError = null;
 	});
 
-	// Persist selected date in sessionStorage so it survives article/group detail navigation
+	// Persist selected date and loaded page count in sessionStorage
 	const FILTER_KEY = `article-reader:date-filter:${data.category}`;
+	const PAGE_KEY = `article-reader:loaded-page:${data.category}`;
 
 	function loadSavedDate(): string | null {
 		if (typeof sessionStorage === 'undefined') return null;
@@ -67,6 +68,22 @@
 		} else {
 			sessionStorage.setItem(FILTER_KEY, date);
 		}
+	}
+
+	function loadSavedPage(): number {
+		if (typeof sessionStorage === 'undefined') return 1;
+		const val = sessionStorage.getItem(PAGE_KEY);
+		return val ? parseInt(val) : 1;
+	}
+
+	function saveCurrentPage(page: number) {
+		if (typeof sessionStorage === 'undefined') return;
+		sessionStorage.setItem(PAGE_KEY, String(page));
+	}
+
+	function clearPageState() {
+		if (typeof sessionStorage === 'undefined') return;
+		sessionStorage.removeItem(PAGE_KEY);
 	}
 
 	let selectedDate = $state<string | null>(loadSavedDate());
@@ -103,6 +120,7 @@
 	async function selectDate(date: string | null) {
 		selectedDate = date;
 		saveDateFilter(date);
+		clearPageState();
 		isLoadingDate = true;
 		loadError = null;
 		try {
@@ -132,6 +150,7 @@
 			allItems = [...allItems, ...response.items];
 			currentPage = nextPage;
 			totalPages = response.pages;
+			saveCurrentPage(nextPage);
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : 'Failed to load more items';
 		} finally {
@@ -143,12 +162,39 @@
 	let sentinelEl: HTMLDivElement | undefined = $state();
 
 	onMount(() => {
-		// If a saved date filter exists, re-fetch with that filter
-		// (initial load from +page.ts always loads "All")
-		const saved = loadSavedDate();
-		if (saved !== null) {
-			selectDate(saved);
+		// Restore saved state (date filter + loaded pages)
+		const savedDate = loadSavedDate();
+		const savedPage = loadSavedPage();
+
+		async function restoreState() {
+			if (savedDate !== null || savedPage > 1) {
+				// Need to re-fetch: either a date filter is active or we had loaded multiple pages
+				selectedDate = savedDate;
+				isLoadingDate = true;
+				try {
+					const targetPage = savedPage > 1 ? savedPage : 1;
+					// Fetch all pages up to the saved page sequentially
+					const firstResponse = await getFeed(buildFeedParams(1));
+					let items = [...firstResponse.items];
+					totalPages = firstResponse.pages;
+					totalCount = firstResponse.total;
+
+					for (let p = 2; p <= Math.min(targetPage, firstResponse.pages); p++) {
+						const response = await getFeed(buildFeedParams(p));
+						items = [...items, ...response.items];
+					}
+
+					allItems = items;
+					currentPage = Math.min(targetPage, firstResponse.pages);
+				} catch (e) {
+					loadError = e instanceof Error ? e.message : 'Failed to restore items';
+				} finally {
+					isLoadingDate = false;
+				}
+			}
 		}
+
+		restoreState();
 
 		if (!sentinelEl) return;
 		const observer = new IntersectionObserver(
@@ -176,8 +222,9 @@
 			const id = parseInt(groupMatch[1]);
 			sessionReadSet.add('group', id);
 		} else {
-			// Navigating away from category (e.g., back to home) — clear saved filter
+			// Navigating away from category (e.g., back to home) — clear saved filter and page
 			saveDateFilter(null);
+			clearPageState();
 			sessionReadSet.clear();
 		}
 	});
