@@ -52,7 +52,7 @@
 		loadError = null;
 	});
 
-	let selectedDate = $state<string | null>(new Date().toISOString().split('T')[0]);
+	let selectedDate = $state<string | null>(null);
 
 	let visibleItems = $derived(filterReadItems(allItems, $readState, $groupReadState, $sessionReadSet));
 
