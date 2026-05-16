@@ -7,7 +7,6 @@
 	import CategoryCard from '$lib/components/CategoryCard.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
-	import { readState } from '$lib/stores/readState';
 
 	const ORDER_KEY = 'article-reader:category-order';
 
@@ -164,25 +163,6 @@
 		document.addEventListener('touchmove', handler, { passive: false });
 		return () => document.removeEventListener('touchmove', handler);
 	});
-
-	interface ReadCounts { read: number; unread: number; total: number }
-
-	let categoryReadCounts = $derived.by((): Record<string, ReadCounts> => {
-		const result: Record<string, ReadCounts> = {};
-		for (const [cat, ids] of Object.entries(data.articleIdsByCategory ?? {})) {
-			const total = ids.length;
-			const read = ids.filter((id) => $readState.includes(id)).length;
-			result[cat] = { read, unread: total - read, total };
-		}
-		return result;
-	});
-
-	let totalReadCounts = $derived.by((): ReadCounts => {
-		const ids = data.allArticleIds ?? [];
-		const total = ids.length;
-		const read = ids.filter((id) => $readState.includes(id)).length;
-		return { read, unread: total - read, total };
-	});
 </script>
 
 <main class="container mx-auto max-w-2xl px-4 py-8">
@@ -213,7 +193,7 @@
 			>
 				<span class="text-base font-semibold text-white">All in one</span>
 				<span class="text-sm text-blue-100">
-					{totalReadCounts.unread} unread
+					{data.totalCount} articles
 				</span>
 			</a>
 			{#each orderedCategories as cat, i}
@@ -232,7 +212,6 @@
 					<CategoryCard
 						category={cat.category}
 						count={cat.count}
-						unreadCount={categoryReadCounts[cat.category]?.unread ?? cat.count}
 					/>
 				</div>
 			{/each}

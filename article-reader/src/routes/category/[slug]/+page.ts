@@ -11,7 +11,7 @@ export const load: PageLoad = async ({ params, depends }) => {
 	const category = decodeURIComponent(params.slug);
 	const isAllInOne = category === '__all__';
 	try {
-		const pageSize = 100;
+		const pageSize = 30;
 		const feedParams = {
 			...(isAllInOne ? {} : { category }),
 			min_score: s.minScore,
@@ -20,21 +20,25 @@ export const load: PageLoad = async ({ params, depends }) => {
 			size: pageSize
 		};
 		const firstPage = await getFeed(feedParams);
-		const allItems: FeedItem[] = [...firstPage.items];
-		const totalPages = firstPage.pages;
-		if (totalPages > 1) {
-			const pagePromises = [];
-			for (let page = 2; page <= totalPages; page++) {
-				pagePromises.push(getFeed({ ...feedParams, page }));
-			}
-			const pages = await Promise.all(pagePromises);
-			for (const page of pages) {
-				allItems.push(...page.items);
-			}
-		}
-		return { items: allItems, category, error: null };
+		return {
+			items: firstPage.items,
+			category,
+			totalPages: firstPage.pages,
+			totalCount: firstPage.total,
+			currentPage: 1,
+			pageSize,
+			error: null
+		};
 	} catch (e) {
 		const error = e instanceof Error ? e.message : 'Failed to load feed';
-		return { items: [] as FeedItem[], category, error };
+		return {
+			items: [] as FeedItem[],
+			category,
+			totalPages: 0,
+			totalCount: 0,
+			currentPage: 1,
+			pageSize: 30,
+			error
+		};
 	}
 };

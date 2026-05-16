@@ -1,6 +1,6 @@
 import type { PageLoad } from './$types';
-import { getAllArticles } from '$lib/api';
-import { extractCategories, buildDateFrom } from '$lib/utils';
+import { getCategories } from '$lib/api';
+import { buildDateFrom } from '$lib/utils';
 import { get } from 'svelte/store';
 import { settings } from '$lib/stores/settings';
 import type { CategoryCount } from '$lib/types';
@@ -9,23 +9,17 @@ export const load: PageLoad = async ({ depends }) => {
 	depends('app:home');
 	const s = get(settings);
 	try {
-		const articles = await getAllArticles({
+		const data = await getCategories({
 			min_score: s.minScore,
 			date_from: buildDateFrom(s.daysBack)
 		});
-		const articleIdsByCategory: Record<string, number[]> = {};
-		for (const article of articles) {
-			for (const tag of article.tags) {
-				if (!articleIdsByCategory[tag.category]) articleIdsByCategory[tag.category] = [];
-				articleIdsByCategory[tag.category].push(article.id);
-			}
-		}
-		const allArticleIds = articles.map((a) => a.id);
+		const categories: CategoryCount[] = data.categories.map((c) => ({
+			category: c.category,
+			count: c.count
+		}));
 		return {
-			categories: extractCategories(articles),
-			totalCount: articles.length,
-			articleIdsByCategory,
-			allArticleIds,
+			categories,
+			totalCount: data.total,
 			error: null
 		};
 	} catch (e) {
@@ -33,8 +27,6 @@ export const load: PageLoad = async ({ depends }) => {
 		return {
 			categories: [] as CategoryCount[],
 			totalCount: 0,
-			articleIdsByCategory: {} as Record<string, number[]>,
-			allArticleIds: [] as number[],
 			error
 		};
 	}

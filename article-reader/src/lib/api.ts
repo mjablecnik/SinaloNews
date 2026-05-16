@@ -93,3 +93,20 @@ export async function getAllArticles(params: ArticleQueryParams): Promise<Articl
 
 	return allItems;
 }
+
+export interface CategoriesApiResponse {
+	categories: { category: string; count: number }[];
+	total: number;
+}
+
+export async function getCategories(params: {
+	min_score?: number;
+	date_from?: string;
+}): Promise<CategoriesApiResponse> {
+	const url = buildUrl('/api/categories', params as Record<string, string | number | undefined>);
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`);
+	}
+	return response.json() as Promise<CategoriesApiResponse>;
+}

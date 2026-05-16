@@ -4,22 +4,43 @@
 	import { readState } from '$lib/stores/readState';
 	import { groupReadState } from '$lib/stores/groupReadState';
 	import { sessionReadSet } from '$lib/stores/sessionReadSet';
+	import { settings } from '$lib/stores/settings';
+	import { getFeed } from '$lib/api';
+	import { buildDateFrom } from '$lib/utils';
 	import ArticleCard from '$lib/components/ArticleCard.svelte';
 	import GroupCard from '$lib/components/GroupCard.svelte';
 	import DateFilter from '$lib/components/DateFilter.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import { extractUniqueDates, getTodayDateString, sortByImportance, formatDateOnly, filterReadItems } from '$lib/utils';
-	import type { ArticleSummary } from '$lib/types';
+	import type { ArticleSummary, FeedItem } from '$lib/types';
+	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
 	let { data }: { data: PageData } = $props();
 
 	const isAllInOne = $derived(data.category === '__all__');
 
+	// Pagination state
+	let allItems = $state<FeedItem[]>([]);
+	let currentPage = $state(1);
+	let totalPages = $state(0);
+	let isLoadingMore = $state(false);
+	let loadError = $state<string | null>(null);
+
+	// Reset when data changes (e.g., navigation to different category)
+	$effect(() => {
+		allItems = [...data.items];
+		currentPage = data.currentPage;
+		totalPages = data.totalPages;
+		loadError = null;
+	});
+
 	let selectedDate = $state<string | null>(getTodayDateString());
 
-	let dates = $derived(extractUniqueDates(data.items));
+	let dates = $derived(extractUniqueDates(allItems));
 
-	let visibleItems = $derived(filterReadItems(data.items, $readState, $groupReadState, $sessionReadSet));
+	let visibleItems = $derived(filterReadItems(allItems, $readState, $groupReadState, $sessionReadSet));
 
 	let filteredItems = $derived.by(() => {
 		const sorted = sortByImportance(visibleItems);
@@ -35,13 +56,56 @@
 		filteredItems.filter((item) => {
 			const key = `${item.type}:${item.id}`;
 			if ($sessionReadSet.has(key)) {
-				// Session-read items are visible but count as read
 				if (item.type === 'group') return !$groupReadState.includes(item.id);
 				return !$readState.includes(item.id);
 			}
-			return true; // If it passed filterReadItems and isn't session-read, it's unread
+			return true;
 		}).length
 	);
+
+	let hasMore = $derived(currentPage < totalPages);
+
+	async function loadMore() {
+		if (isLoadingMore || !hasMore) return;
+		isLoadingMore = true;
+		loadError = null;
+		try {
+			const s = get(settings);
+			const nextPage = currentPage + 1;
+			const feedParams = {
+				...(isAllInOne ? {} : { category: data.category }),
+				min_score: s.minScore,
+				date_from: buildDateFrom(s.daysBack),
+				page: nextPage,
+				size: data.pageSize
+			};
+			const response = await getFeed(feedParams);
+			allItems = [...allItems, ...response.items];
+			currentPage = nextPage;
+			totalPages = response.pages;
+		} catch (e) {
+			loadError = e instanceof Error ? e.message : 'Failed to load more items';
+		} finally {
+			isLoadingMore = false;
+		}
+	}
+
+	// Infinite scroll: observe a sentinel element near the bottom
+	let sentinelEl: HTMLDivElement | undefined = $state();
+
+	onMount(() => {
+		if (!sentinelEl) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+					loadMore();
+				}
+			},
+			{ rootMargin: '200px' }
+		);
+		observer.observe(sentinelEl);
+		return () => observer.disconnect();
+	});
 
 	beforeNavigate(({ to }) => {
 		const path = to?.url.pathname ?? '';
@@ -81,11 +145,11 @@
 		{#if dates.length > 0}
 			<div class="mb-4">
 				<DateFilter {dates} selected={selectedDate} onSelect={(d) => { selectedDate = d; }} />
-				<p class="mt-2 text-xs text-gray-500">{unreadCount} unread</p>
+				<p class="mt-2 text-xs text-gray-500">{unreadCount} unread · {data.totalCount} total</p>
 			</div>
 		{/if}
 
-		{#if filteredItems.length === 0}
+		{#if filteredItems.length === 0 && !isLoadingMore}
 			<p class="py-12 text-center text-gray-500">
 				{selectedDate ? 'No articles for this date.' : 'No articles found.'}
 			</p>
@@ -113,6 +177,31 @@
 					{/if}
 				{/each}
 			</div>
+
+			<!-- Infinite scroll sentinel -->
+			<div bind:this={sentinelEl} class="py-4">
+				{#if isLoadingMore}
+					<div class="flex justify-center">
+						<LoadingSpinner />
+					</div>
+				{:else if hasMore}
+					<button
+						onclick={loadMore}
+						class="w-full rounded-lg border border-gray-200 bg-white py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+					>
+						Load more
+					</button>
+				{:else if allItems.length > 0}
+					<p class="text-center text-xs text-gray-400">All items loaded</p>
+				{/if}
+			</div>
+
+			{#if loadError}
+				<div class="mt-2 rounded bg-red-50 p-3 text-sm text-red-700">
+					{loadError}
+					<button onclick={loadMore} class="ml-2 underline">Retry</button>
+				</div>
+			{/if}
 		{/if}
 	{/if}
 </main>
