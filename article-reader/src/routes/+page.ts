@@ -15,7 +15,9 @@ export const load: PageLoad = async ({ depends }) => {
 		});
 		const categories: CategoryCount[] = data.categories.map((c) => ({
 			category: c.category,
-			count: c.count
+			count: c.count,
+			articleIds: c.article_ids,
+			groupIds: c.group_ids
 		}));
 		return {
 			categories,

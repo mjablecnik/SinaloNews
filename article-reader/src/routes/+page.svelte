@@ -7,6 +7,8 @@
 	import CategoryCard from '$lib/components/CategoryCard.svelte';
 	import ErrorMessage from '$lib/components/ErrorMessage.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
+	import { readState } from '$lib/stores/readState';
+	import { groupReadState } from '$lib/stores/groupReadState';
 
 	const ORDER_KEY = 'article-reader:category-order';
 
@@ -163,6 +165,21 @@
 		document.addEventListener('touchmove', handler, { passive: false });
 		return () => document.removeEventListener('touchmove', handler);
 	});
+
+	// Compute unread counts per category
+	function getUnreadCount(cat: CategoryCount): number {
+		const readArticles = cat.articleIds.filter((id) => $readState.includes(id)).length;
+		const readGroups = cat.groupIds.filter((id) => $groupReadState.includes(id)).length;
+		return cat.count - readArticles - readGroups;
+	}
+
+	let totalUnread = $derived.by(() => {
+		let unread = 0;
+		for (const cat of data.categories) {
+			unread += getUnreadCount(cat);
+		}
+		return unread;
+	});
 </script>
 
 <main class="container mx-auto max-w-2xl px-4 py-8">
@@ -193,7 +210,7 @@
 			>
 				<span class="text-base font-semibold text-white">All in one</span>
 				<span class="text-sm text-blue-100">
-					{data.totalCount} articles
+					{totalUnread} unread / {data.totalCount}
 				</span>
 			</a>
 			{#each orderedCategories as cat, i}
@@ -212,6 +229,7 @@
 					<CategoryCard
 						category={cat.category}
 						count={cat.count}
+						unreadCount={getUnreadCount(cat)}
 					/>
 				</div>
 			{/each}

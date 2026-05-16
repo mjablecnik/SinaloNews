@@ -95,7 +95,7 @@ export async function getAllArticles(params: ArticleQueryParams): Promise<Articl
 }
 
 export interface CategoriesApiResponse {
-	categories: { category: string; count: number }[];
+	categories: { category: string; count: number; article_ids: number[]; group_ids: number[] }[];
 	total: number;
 }
 

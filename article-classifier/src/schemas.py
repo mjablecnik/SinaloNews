@@ -68,6 +68,8 @@ class ClassifyStatusResponse(BaseModel):
 class CategoryCountResponse(BaseModel):
     category: str
     count: int
+    article_ids: list[int]
+    group_ids: list[int]
 
 
 class CategoriesResponse(BaseModel):

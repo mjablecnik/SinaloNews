@@ -33,6 +33,8 @@ export interface PaginatedResponse {
 export interface CategoryCount {
 	category: string;
 	count: number;
+	articleIds: number[];
+	groupIds: number[];
 }
 
 export interface Settings {

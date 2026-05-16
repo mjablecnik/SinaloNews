@@ -388,9 +388,9 @@ async def get_categories(
     date_to: date | None = Query(None),
     session: AsyncSession = Depends(get_session),
 ) -> CategoriesResponse:
-    """Return category names with article counts (lightweight, no full article data)."""
+    """Return category names with feed item counts and IDs (standalone articles + groups)."""
     cache_params = {"min_score": min_score, "date_from": date_from, "date_to": date_to}
-    key = _cache_key("categories", cache_params)
+    key = _cache_key("categories_v2", cache_params)
     cached = _cache_get(key)
     if cached is not None:
         return cached  # type: ignore[return-value]
@@ -399,16 +399,19 @@ async def get_categories(
 
     ParentTag = aliased(Tag)
 
-    stmt = (
+    # Standalone articles (not in any group) per category
+    article_stmt = (
         select(
             ParentTag.name.label("category_name"),
-            func.count(func.distinct(Article.id)).label("article_count"),
+            Article.id.label("article_id"),
         )
         .select_from(ArticleTag)
         .join(Tag, Tag.id == ArticleTag.tag_id)
         .join(ParentTag, ParentTag.id == Tag.parent_id)
         .join(ClassificationResult, ClassificationResult.id == ArticleTag.classification_result_id)
         .join(Article, Article.id == ClassificationResult.article_id)
+        .outerjoin(ArticleGroupMember, ArticleGroupMember.article_id == Article.id)
+        .where(ArticleGroupMember.id.is_(None))
     )
 
     filters = []
@@ -420,13 +423,70 @@ async def get_categories(
         filters.append(func.date(Article.published_at) <= date_to)
 
     if filters:
-        stmt = stmt.where(and_(*filters))
+        article_stmt = article_stmt.where(and_(*filters))
 
-    stmt = stmt.group_by(ParentTag.name).order_by(func.count(func.distinct(Article.id)).desc())
+    article_rows = (await session.execute(article_stmt)).all()
 
-    rows = (await session.execute(stmt)).all()
+    # Groups per category
+    group_stmt = (
+        select(ArticleGroup.id, ArticleGroup.category)
+        .select_from(ArticleGroup)
+    )
 
-    categories = [CategoryCountResponse(category=row.category_name, count=row.article_count) for row in rows]
+    group_filters = []
+    if date_from is not None:
+        group_filters.append(ArticleGroup.grouped_date >= date_from)
+    if date_to is not None:
+        group_filters.append(ArticleGroup.grouped_date <= date_to)
+
+    if group_filters:
+        group_stmt = group_stmt.where(and_(*group_filters))
+
+    group_rows = (await session.execute(group_stmt)).all()
+
+    # Filter groups by min_score if needed
+    if min_score is not None:
+        group_ids_to_check = [row.id for row in group_rows]
+        if group_ids_to_check:
+            members_stmt = (
+                select(ArticleGroup)
+                .where(ArticleGroup.id.in_(group_ids_to_check))
+                .options(_GROUP_MEMBER_LOAD_OPTIONS)
+            )
+            groups_with_members = list((await session.execute(members_stmt)).scalars().all())
+            valid_group_ids = {
+                g.id for g in groups_with_members
+                if _compute_group_importance(g.members) >= min_score
+            }
+            group_rows = [row for row in group_rows if row.id in valid_group_ids]
+
+    # Build per-category data
+    cat_data: dict[str, dict] = {}
+    for row in article_rows:
+        cat_name = row.category_name
+        if cat_name not in cat_data:
+            cat_data[cat_name] = {"article_ids": set(), "group_ids": set()}
+        cat_data[cat_name]["article_ids"].add(row.article_id)
+
+    for row in group_rows:
+        cat_name = row.category
+        if cat_name not in cat_data:
+            cat_data[cat_name] = {"article_ids": set(), "group_ids": set()}
+        cat_data[cat_name]["group_ids"].add(row.id)
+
+    categories = []
+    for cat_name, data in cat_data.items():
+        article_ids = sorted(data["article_ids"])
+        group_ids = sorted(data["group_ids"])
+        count = len(article_ids) + len(group_ids)
+        categories.append(CategoryCountResponse(
+            category=cat_name,
+            count=count,
+            article_ids=article_ids,
+            group_ids=group_ids,
+        ))
+
+    categories.sort(key=lambda c: c.count, reverse=True)
     total = sum(c.count for c in categories)
 
     result = CategoriesResponse(categories=categories, total=total)

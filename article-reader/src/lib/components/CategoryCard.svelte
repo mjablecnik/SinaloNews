@@ -39,7 +39,7 @@
 >
 	<span class="text-base font-semibold {textClass}">{category}</span>
 	{#if unreadCount !== undefined}
-		<span class="text-sm {subtextClass}">{unreadCount} unread</span>
+		<span class="text-sm {subtextClass}">{unreadCount} unread / {count}</span>
 	{:else}
 		<span class="text-sm {subtextClass}">{count} {count === 1 ? 'article' : 'articles'}</span>
 	{/if}
