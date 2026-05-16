@@ -62,7 +62,7 @@
 	</div>
 
 	{#if summaryHtml}
-		<div class="prose prose-sm max-w-none text-gray-700 line-clamp-3">
+		<div class="prose prose-sm max-w-none text-gray-700">
 			{@html summaryHtml}
 		</div>
 	{/if}
