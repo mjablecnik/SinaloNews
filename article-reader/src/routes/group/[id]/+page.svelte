@@ -78,7 +78,7 @@
 						<li>
 							<a
 								href="/article/{member.id}"
-								class="block rounded-lg border border-gray-200 p-3 hover:border-purple-300 hover:bg-purple-50 transition-colors"
+								class="block rounded-lg border border-gray-200 p-3 transition-colors"
 							>
 								<p class="font-medium text-gray-900 text-sm leading-snug">
 									{member.title ?? 'Untitled'}

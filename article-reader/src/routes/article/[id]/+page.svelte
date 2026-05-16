@@ -118,7 +118,13 @@
 					<h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
 						Full Article
 						{#if isFormatting}
-							<span class="ml-2 text-xs font-normal text-blue-500">⟳ Formatting...</span>
+							<button
+								onclick={() => invalidateAll()}
+								class="ml-2 text-xs font-normal text-blue-500 hover:text-blue-700 cursor-pointer"
+								title="Click to reload"
+							>
+								⟳ Formatting...
+							</button>
 						{/if}
 					</h2>
 					<div class="prose max-w-none">
