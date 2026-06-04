@@ -186,26 +186,44 @@ class ClassifierService:
             if not articles:
                 return {"processed": 0, "failed": 0}
 
+            # Eagerly extract article data into plain Python values so that
+            # session rollbacks (which expire all ORM state) don't trigger
+            # lazy-load IO outside the greenlet context (MissingGreenlet).
+            article_data = [
+                {
+                    "article": article,
+                    "id": article.id,
+                    "title": article.title or "",
+                    "extracted_text": article.extracted_text or "",
+                }
+                for article in articles
+            ]
+
             existing_tags = await self.get_existing_tags(session)
             tags_for_prompt = self._tags_to_prompt_dicts(existing_tags)
 
             processed = 0
             failed = 0
 
-            for article in articles:
+            for item in article_data:
+                article = item["article"]
+                article_id = item["id"]
+                article_title = item["title"]
+                article_text = item["extracted_text"]
+
                 try:
                     output = await self._pipeline.classify(
-                        article_title=article.title or "",
-                        article_text=article.extracted_text or "",
+                        article_title=article_title,
+                        article_text=article_text,
                         article_summary=None,
                         existing_tags=tags_for_prompt,
                     )
 
-                    is_short = len(article.extracted_text or "") < 100
+                    is_short = len(article_text) < 100
                     resolved_tags = await self._validate_tags(session, output.tags, existing_tags)
 
                     if not resolved_tags and not is_short:
-                        log.error("all_tags_failed_validation", article_id=article.id)
+                        log.error("all_tags_failed_validation", article_id=article_id)
                         failed += 1
                         continue
 
@@ -218,7 +236,7 @@ class ClassifierService:
                     processed += 1
                     log.info(
                         "article_persisted",
-                        article_id=article.id,
+                        article_id=article_id,
                         tags_count=len(resolved_tags),
                         content_type=output.content_type,
                         importance_score=output.importance_score,
@@ -227,7 +245,7 @@ class ClassifierService:
                 except Exception as exc:
                     log.error(
                         "article_classification_failed",
-                        article_id=article.id,
+                        article_id=article_id,
                         error=str(exc)[:500],
                     )
                     failed += 1
