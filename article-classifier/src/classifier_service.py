@@ -31,7 +31,7 @@ class ClassifierService:
         )
 
     async def get_unprocessed_articles(self, session: AsyncSession, batch_size: int) -> list[Article]:
-        """Fetch articles with extracted_text but no classification result."""
+        """Fetch articles with extracted_text but no classification result (newest first)."""
         stmt = (
             select(Article)
             .where(
@@ -39,6 +39,7 @@ class ClassifierService:
                 Article.extracted_text != "",
                 ~exists().where(ClassificationResult.article_id == Article.id),
             )
+            .order_by(Article.id.desc())
             .limit(batch_size)
         )
         result = await session.execute(stmt)
