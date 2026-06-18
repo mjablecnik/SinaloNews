@@ -39,6 +39,14 @@ rss-feed (port 8000)         article-classifier (port 8002)       article-reader
 | [rag-agent](rag-agent/README.md) | Python, FastAPI, LangGraph, Qdrant | 8001 | `sinalo-rag-agent` | RAG-based question answering over collected articles |
 | [article-reader](article-reader/README.md) | SvelteKit, TypeScript, Tailwind | 3000 | `sinalo-reader` | Web UI for browsing, reading, and saving classified articles |
 
+## Screenshots
+
+<p>
+  <img src="screenshots/Screenshot_20260618_082150.png" width="32%" />
+  <img src="screenshots/Screenshot_20260618_082248.png" width="32%" />
+  <img src="screenshots/Screenshot_20260618_082406.png" width="32%" />
+</p>
+
 ## Data Flow
 
 1. **rss-feed** discovers feeds on registered websites, parses entries, and extracts article text into PostgreSQL
