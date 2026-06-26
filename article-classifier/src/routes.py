@@ -774,7 +774,7 @@ async def cleanup_old_articles(
 
     # Find articles to delete
     article_ids_stmt = (
-        select(Article.id).where(func.date(Article.published_at) < before)
+        select(Article.id).where(func.date(Article.created_at) < before)
     )
     article_ids = list((await session.execute(article_ids_stmt)).scalars().all())
 
