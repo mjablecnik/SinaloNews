@@ -757,20 +757,35 @@ async def get_feed(
 
 @router.delete("/api/articles/cleanup", response_model=CleanupResponse)
 async def cleanup_old_articles(
-    before: date = Query(..., description="Delete articles published before this date"),
+    before: date = Query(..., description="Delete articles and groups created before this date"),
     session: AsyncSession = Depends(get_session),
 ) -> CleanupResponse:
-    """Delete articles (and their related data) published before the given date."""
+    """Delete articles and groups (and their related data) created before the given date."""
     from datetime import timedelta
+    from sqlalchemy import delete as sa_delete
     from src.models import FullArticleIndexed
 
-    # Safety check: refuse to delete articles from the last 30 days
+    # Safety check: refuse to delete data from the last 30 days
     min_allowed_date = date.today() - timedelta(days=30)
     if before > min_allowed_date:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot delete articles newer than 30 days. Earliest allowed 'before' date is {min_allowed_date}.",
+            detail=f"Cannot delete data newer than 30 days. Earliest allowed 'before' date is {min_allowed_date}.",
         )
+
+    # Delete article groups by created_at
+    old_group_ids_stmt = select(ArticleGroup.id).where(func.date(ArticleGroup.created_at) < before)
+    old_group_ids = list((await session.execute(old_group_ids_stmt)).scalars().all())
+
+    deleted_groups = 0
+    if old_group_ids:
+        await session.execute(
+            sa_delete(ArticleGroupMember).where(ArticleGroupMember.group_id.in_(old_group_ids))
+        )
+        await session.execute(
+            sa_delete(ArticleGroup).where(ArticleGroup.id.in_(old_group_ids))
+        )
+        deleted_groups = len(old_group_ids)
 
     # Find articles to delete
     article_ids_stmt = (
@@ -778,64 +793,45 @@ async def cleanup_old_articles(
     )
     article_ids = list((await session.execute(article_ids_stmt)).scalars().all())
 
-    if not article_ids:
-        return CleanupResponse(deleted_articles=0, deleted_groups=0, before_date=str(before))
-
-    # Delete full_article_indexed entries
-    from sqlalchemy import delete as sa_delete
-
-    await session.execute(
-        sa_delete(FullArticleIndexed).where(FullArticleIndexed.article_id.in_(article_ids))
-    )
-
-    # Find classification_result IDs for these articles
-    cr_ids_stmt = select(ClassificationResult.id).where(
-        ClassificationResult.article_id.in_(article_ids)
-    )
-    cr_ids = list((await session.execute(cr_ids_stmt)).scalars().all())
-
-    # Delete article_tags (cascade from classification_results)
-    if cr_ids:
+    if article_ids:
+        # Delete full_article_indexed entries
         await session.execute(
-            sa_delete(ArticleTag).where(ArticleTag.classification_result_id.in_(cr_ids))
+            sa_delete(FullArticleIndexed).where(FullArticleIndexed.article_id.in_(article_ids))
         )
 
-    # Delete classification_results
-    if cr_ids:
+        # Find classification_result IDs for these articles
+        cr_ids_stmt = select(ClassificationResult.id).where(
+            ClassificationResult.article_id.in_(article_ids)
+        )
+        cr_ids = list((await session.execute(cr_ids_stmt)).scalars().all())
+
+        # Delete article_tags
+        if cr_ids:
+            await session.execute(
+                sa_delete(ArticleTag).where(ArticleTag.classification_result_id.in_(cr_ids))
+            )
+
+        # Delete classification_results
+        if cr_ids:
+            await session.execute(
+                sa_delete(ClassificationResult).where(ClassificationResult.id.in_(cr_ids))
+            )
+
+        # Delete remaining article_group_members for these articles
         await session.execute(
-            sa_delete(ClassificationResult).where(ClassificationResult.id.in_(cr_ids))
+            sa_delete(ArticleGroupMember).where(ArticleGroupMember.article_id.in_(article_ids))
         )
 
-    # Delete article_group_members for deleted articles
-    await session.execute(
-        sa_delete(ArticleGroupMember).where(ArticleGroupMember.article_id.in_(article_ids))
-    )
-
-    # Delete article groups by created_at (same cutoff as articles)
-    old_group_ids_stmt = select(ArticleGroup.id).where(func.date(ArticleGroup.created_at) < before)
-    old_group_ids = list((await session.execute(old_group_ids_stmt)).scalars().all())
-
-    deleted_groups = 0
-    if old_group_ids:
-        # Delete members of old groups
+        # Delete articles
         await session.execute(
-            sa_delete(ArticleGroupMember).where(ArticleGroupMember.group_id.in_(old_group_ids))
+            sa_delete(Article).where(Article.id.in_(article_ids))
         )
-        # Delete the groups themselves
-        await session.execute(
-            sa_delete(ArticleGroup).where(ArticleGroup.id.in_(old_group_ids))
-        )
-        deleted_groups = len(old_group_ids)
-
-    # Delete articles
-    await session.execute(
-        sa_delete(Article).where(Article.id.in_(article_ids))
-    )
 
     await session.commit()
 
     # Clear cache since data changed
-    _cache.clear()
+    if article_ids or old_group_ids:
+        _cache.clear()
 
     log.info("cleanup_complete", deleted_articles=len(article_ids), deleted_groups=deleted_groups, before=str(before))
 
