@@ -806,28 +806,26 @@ async def cleanup_old_articles(
             sa_delete(ClassificationResult).where(ClassificationResult.id.in_(cr_ids))
         )
 
-    # Delete article_group_members and track affected groups
-    affected_group_ids_stmt = select(ArticleGroupMember.group_id).where(
-        ArticleGroupMember.article_id.in_(article_ids)
-    )
-    affected_group_ids = list((await session.execute(affected_group_ids_stmt)).scalars().all())
-
+    # Delete article_group_members for deleted articles
     await session.execute(
         sa_delete(ArticleGroupMember).where(ArticleGroupMember.article_id.in_(article_ids))
     )
 
-    # Delete groups that have no remaining members
+    # Delete article groups by created_at (same cutoff as articles)
+    old_group_ids_stmt = select(ArticleGroup.id).where(func.date(ArticleGroup.created_at) < before)
+    old_group_ids = list((await session.execute(old_group_ids_stmt)).scalars().all())
+
     deleted_groups = 0
-    if affected_group_ids:
-        for group_id in set(affected_group_ids):
-            remaining = (await session.execute(
-                select(func.count()).where(ArticleGroupMember.group_id == group_id)
-            )).scalar() or 0
-            if remaining == 0:
-                await session.execute(
-                    sa_delete(ArticleGroup).where(ArticleGroup.id == group_id)
-                )
-                deleted_groups += 1
+    if old_group_ids:
+        # Delete members of old groups
+        await session.execute(
+            sa_delete(ArticleGroupMember).where(ArticleGroupMember.group_id.in_(old_group_ids))
+        )
+        # Delete the groups themselves
+        await session.execute(
+            sa_delete(ArticleGroup).where(ArticleGroup.id.in_(old_group_ids))
+        )
+        deleted_groups = len(old_group_ids)
 
     # Delete articles
     await session.execute(
